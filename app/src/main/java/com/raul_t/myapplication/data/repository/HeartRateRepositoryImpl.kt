@@ -12,7 +12,7 @@ class HeartRateRepositoryImpl @Inject constructor(
     override suspend fun getHeartRate(): HeartRate {
 
         return HeartRate(
-            bpm = dataSource.getHeartRate()
+            bpm = dataSource.getCurrentHeartRate()
         )
 
     }
