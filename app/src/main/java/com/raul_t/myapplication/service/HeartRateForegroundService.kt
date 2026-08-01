@@ -5,7 +5,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
+import android.util.Log
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.raul_t.myapplication.R
@@ -28,13 +30,29 @@ class HeartRateForegroundService : Service() {
         SupervisorJob() + Dispatchers.IO
     )
 
+    override fun onCreate() {
+        super.onCreate()
+        Log.d("HeartRateService", "onCreate")
+        createNotificationChannel()
+    }
+
     override fun onBind(p0: Intent?): IBinder? {
         return null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-
-        startForeground(1, createNotification())
+        Log.d("HeartRateService", "onStartCommand")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            Log.d("HeartRateService", "Starting foreground with type")
+            startForeground(
+                101,
+                createNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            Log.d("HeartRateService", "Starting foreground without type")
+            startForeground(101, createNotification())
+        }
 
         serviceScope.launch {
             while (true) {
@@ -46,15 +64,15 @@ class HeartRateForegroundService : Service() {
     }
 
     private fun createNotification(): Notification {
-
+        Log.d("HeartRateService", "createNotification")
         val channelId = "heart_rate_service"
-
-        createNotificationChannel()
 
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("Heart Rate Simulator")
             .setContentText("Generating heart rate data...")
             .setSmallIcon(R.drawable.ic_heart)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
             .build()
     }
