@@ -22,4 +22,8 @@ class HeartRateRepositoryImpl @Inject constructor(
             bpm = dataSource.getCurrentHeartRate()
         )
     }
+
+    override suspend fun setHeartRate(setBpmEnable: Boolean,bpm: Int) {
+        dataSource.setHeartRate(setBpmEnable,bpm)
+    }
 }

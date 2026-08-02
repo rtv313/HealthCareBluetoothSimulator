@@ -6,6 +6,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.util.Log
 import android.os.IBinder
+import androidx.annotation.RequiresApi
 import com.raul_t.myapplication.data.datasource.FakeHeartRateDataSource
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -38,6 +39,7 @@ class HeartRateForegroundService : Service() {
         return null
     }
 
+    @RequiresApi(Build.VERSION_CODES.ECLAIR)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("HeartRateService", "onStartCommand")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
