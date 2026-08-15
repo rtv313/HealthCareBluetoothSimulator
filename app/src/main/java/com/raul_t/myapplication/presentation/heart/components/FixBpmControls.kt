@@ -11,12 +11,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.raul_t.myapplication.ui.theme.SuccessGreen
+import kotlin.math.round
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,8 +108,56 @@ fun FixBpmControls(
                         inactiveTickColor = SuccessGreen.copy(alpha = 0.24f),
                     )
                 )
+                RangeSliderBpmVariance()
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RangeSliderBpmVariance() {
+    var sliderPosition by remember { mutableStateOf(0f..15f) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(text = "BPM Variance range: ${round(sliderPosition.start)} - ${round(sliderPosition.endInclusive)}",
+             style = MaterialTheme.typography.bodyMedium)
+
+        RangeSlider(
+            startThumb = {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(
+                            color = SuccessGreen,
+                        )
+                )
+            },
+            endThumb =  {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(
+                            color = SuccessGreen,
+                        )
+                )
+            },
+            value = sliderPosition,
+            onValueChange = { sliderPosition = it },
+            valueRange = 0f..30f,
+            steps = 30,
+            enabled = true,
+            colors = SliderDefaults.colors(
+                activeTrackColor = SuccessGreen,
+                inactiveTrackColor = SuccessGreen.copy(alpha = 0.24f),
+                activeTickColor = SuccessGreen,
+                inactiveTickColor = SuccessGreen.copy(alpha = 0.24f),
+            )
+        )
+    }
+}

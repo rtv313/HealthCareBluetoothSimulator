@@ -38,7 +38,7 @@ fun BpmDisplay(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
         modifier = Modifier
-            .size(width = 200.dp, height = 180.dp)
+            .size(width = 200.dp, height = 130.dp)
             .border(width = 3.dp,
                 color = MaterialTheme.colorScheme.outline,
                 shape = RoundedCornerShape(16.dp)),

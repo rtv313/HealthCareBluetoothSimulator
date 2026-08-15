@@ -38,7 +38,6 @@ fun HeartRateScreen(
         Column(modifier = Modifier
             .padding(innerPadding)
             .padding(24.dp)
-            .statusBarsPadding()
             .fillMaxSize(),) {
 
             Column(

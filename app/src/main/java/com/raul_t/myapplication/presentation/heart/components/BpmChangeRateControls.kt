@@ -29,7 +29,8 @@ fun BpmChangeRateControls() {
         .fillMaxWidth()
         .padding(16.dp)) {
         Text("BPM Change Rate",
-            style = MaterialTheme.typography.titleMedium,)
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,)
 
         Row(
             verticalAlignment = Alignment.CenterVertically
