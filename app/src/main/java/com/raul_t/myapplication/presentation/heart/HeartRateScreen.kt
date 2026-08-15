@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.raul_t.myapplication.presentation.heart.components.BpmDisplay
-import com.raul_t.myapplication.presentation.heart.components.FixRpmControls
+import com.raul_t.myapplication.presentation.heart.components.FixBpmControls
 
 @Composable
 fun HeartRateScreen(
@@ -58,7 +58,7 @@ fun HeartRateScreen(
 
             HorizontalDivider()
 
-            FixRpmControls(
+            FixBpmControls(
                 isFixBpmEnabled = uiState.isFixBpmEnabled,
                 targetBpm = uiState.targetBpm,
                 onFixBpmToggled = { enabled ->

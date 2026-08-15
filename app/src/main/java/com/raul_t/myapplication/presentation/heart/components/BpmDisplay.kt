@@ -38,7 +38,7 @@ fun BpmDisplay(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
         modifier = Modifier
-            .size(width = 240.dp, height = 240.dp)
+            .size(width = 200.dp, height = 180.dp)
             .border(width = 3.dp,
                 color = MaterialTheme.colorScheme.outline,
                 shape = RoundedCornerShape(16.dp)),
@@ -52,14 +52,14 @@ fun BpmDisplay(
             Text(
                 text = "❤",
                 color = MaterialTheme.colorScheme.error,
-                fontSize = 48.sp,
+                fontSize = 40.sp,
                 modifier = Modifier.padding(end = 8.dp)
             )
             Text(
                 text = bpm.toString(),
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 64.sp,
+                    fontSize = 40.sp,
                     fontWeight = FontWeight.Bold
                 )
             )
