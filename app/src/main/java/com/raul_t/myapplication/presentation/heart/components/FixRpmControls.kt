@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun HeartRateControls(
+fun FixRpmControls(
     isFixBpmEnabled: Boolean,
     targetBpm: Int,
     onFixBpmToggled: (Boolean) -> Unit,
@@ -36,12 +36,13 @@ fun HeartRateControls(
             Column {
                 Text(
                     text = "Fix BPM Simulation",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = if (isFixBpmEnabled) "Manual Control Active" else "Random Simulation Active",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isFixBpmEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                    color = if (isFixBpmEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 )
             }
             Switch(
