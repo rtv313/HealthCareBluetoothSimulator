@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -29,6 +31,7 @@ fun HeartRateScreen(
     viewModel: HeartRateViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scrollState = rememberScrollState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -38,7 +41,8 @@ fun HeartRateScreen(
         Column(modifier = Modifier
             .padding(innerPadding)
             .padding(24.dp)
-            .fillMaxSize(),) {
+            .fillMaxSize()
+            .verticalScroll(scrollState)) {
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
