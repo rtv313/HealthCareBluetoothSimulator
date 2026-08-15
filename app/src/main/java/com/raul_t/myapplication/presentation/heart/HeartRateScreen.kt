@@ -19,7 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.raul_t.myapplication.presentation.heart.components.BpmChangeRateControls
 import com.raul_t.myapplication.presentation.heart.components.BpmDisplay
+import com.raul_t.myapplication.presentation.heart.components.BpmStartStopButton
 import com.raul_t.myapplication.presentation.heart.components.FixBpmControls
 
 @Composable
@@ -32,42 +34,53 @@ fun HeartRateScreen(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .padding(24.dp)
-                .statusBarsPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Heart Rate Monitor",
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
-            )
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Column(modifier = Modifier
+            .padding(innerPadding)
+            .padding(24.dp)
+            .statusBarsPadding()
+            .fillMaxSize(),) {
 
-            BpmDisplay(
-                bpm = uiState.bpm,
-                modifier = Modifier.weight(1f)
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Heart Rate Monitor",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                BpmDisplay(
+                    bpm = uiState.bpm,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                BpmStartStopButton()
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                HorizontalDivider()
+
+                FixBpmControls(
+                    isFixBpmEnabled = uiState.isFixBpmEnabled,
+                    targetBpm = uiState.targetBpm,
+                    onFixBpmToggled = { enabled ->
+                        viewModel.setFixBpm(enabled, uiState.targetBpm)
+                    },
+                    onBpmChanged = { bpm ->
+                        viewModel.setFixBpm(uiState.isFixBpmEnabled, bpm)
+                    }
+                )
+            }
 
             HorizontalDivider()
 
-            FixBpmControls(
-                isFixBpmEnabled = uiState.isFixBpmEnabled,
-                targetBpm = uiState.targetBpm,
-                onFixBpmToggled = { enabled ->
-                    viewModel.setFixBpm(enabled, uiState.targetBpm)
-                },
-                onBpmChanged = { bpm ->
-                    viewModel.setFixBpm(uiState.isFixBpmEnabled, bpm)
-                }
-            )
+            BpmChangeRateControls()
         }
     }
 }

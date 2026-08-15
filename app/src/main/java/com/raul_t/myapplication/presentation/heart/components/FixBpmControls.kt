@@ -54,7 +54,7 @@ fun FixBpmControls(
                 Text(
                     text = if (isFixBpmEnabled) "Manual Control Active" else "Random Simulation Active",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isFixBpmEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    color = if (isFixBpmEnabled) SuccessGreen else MaterialTheme.colorScheme.onSurface,
                 )
             }
             Switch(
