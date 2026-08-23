@@ -17,10 +17,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.raul_t.myapplication.R
 import com.raul_t.myapplication.presentation.heart.components.BpmChangeRateControls
 import com.raul_t.myapplication.presentation.heart.components.BpmDisplay
 import com.raul_t.myapplication.presentation.heart.components.BpmStartStopButton
@@ -73,7 +75,7 @@ fun HeartRateContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Heart Rate Monitor",
+                    text = stringResource(R.string.heart_rate_monitor_title),
                     color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 30.sp,
                     fontWeight = FontWeight.Bold

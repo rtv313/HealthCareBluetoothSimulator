@@ -26,8 +26,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.raul_t.myapplication.R
 import com.raul_t.myapplication.ui.theme.SuccessGreen
 import kotlin.math.round
 
@@ -56,12 +58,12 @@ fun FixBpmControls(
         ) {
             Column {
                 Text(
-                    text = "Fix BPM Simulation",
+                    text = stringResource(R.string.fix_bpm_simulation),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = if (isFixBpmEnabled) "Manual Control Active" else "Random Simulation Active",
+                    text = if (isFixBpmEnabled) stringResource(R.string.manual_control_active) else stringResource(R.string.random_simulation_active),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isFixBpmEnabled) SuccessGreen else MaterialTheme.colorScheme.onSurface,
                 )
@@ -86,7 +88,7 @@ fun FixBpmControls(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "Target BPM", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = stringResource(R.string.target_bpm), style = MaterialTheme.typography.bodyMedium)
                     Text(text = "$targetBpm", fontSize = 24.sp, style = MaterialTheme.typography.bodyMedium)
                 }
                 Slider(
@@ -134,7 +136,7 @@ fun RangeSliderBpmVariance(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.Start
     ) {
-        Text(text = "BPM Variance range: $lower - $higher",
+        Text(text = stringResource(id = R.string.bpm_variance_range, lower, higher),
              style = MaterialTheme.typography.bodyMedium)
 
         RangeSlider(

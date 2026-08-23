@@ -12,8 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.raul_t.myapplication.R
 import com.raul_t.myapplication.ui.theme.SuccessGreen
 
 @Composable
@@ -28,7 +30,7 @@ fun BpmChangeRateControls(
             .padding(16.dp)
     ) {
         Text(
-            text = "BPM Change Rate",
+            text = stringResource(R.string.bpm_change_rate),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
@@ -40,7 +42,7 @@ fun BpmChangeRateControls(
                 selected = selectedInterval == 1000L,
                 onClick = { onIntervalChanged(1000L) }
             )
-            Text("1 second")
+            Text(stringResource(R.string.interval_1_second))
         }
 
         Row(
@@ -50,7 +52,7 @@ fun BpmChangeRateControls(
                 selected = selectedInterval == 10000L,
                 onClick = { onIntervalChanged(10000L) }
             )
-            Text("10 seconds")
+            Text(stringResource(R.string.interval_10_seconds))
         }
 
         Row(
@@ -60,7 +62,7 @@ fun BpmChangeRateControls(
                 selected = selectedInterval == 60000L,
                 onClick = { onIntervalChanged(60000L) }
             )
-            Text("1 minute")
+            Text(stringResource(R.string.interval_1_minute))
         }
     }
 }
