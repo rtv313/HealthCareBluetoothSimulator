@@ -5,8 +5,11 @@ import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.raul_t.myapplication.domain.usecase.ObserveBpmVarianceHigherUseCase
+import com.raul_t.myapplication.domain.usecase.ObserveBpmVarianceLowerUseCase
 import com.raul_t.myapplication.domain.usecase.ObserveHeartRateUseCase
 import com.raul_t.myapplication.domain.usecase.ObserveIsBpmStartedUseCase
+import com.raul_t.myapplication.domain.usecase.SetBpmVarianceUseCase
 import com.raul_t.myapplication.domain.usecase.SetFixBpmUseCase
 import com.raul_t.myapplication.domain.usecase.StartBpmUseCase
 import com.raul_t.myapplication.domain.usecase.StopBpmUseCase
@@ -23,7 +26,10 @@ class HeartRateViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val observeHeartRateUseCase: ObserveHeartRateUseCase,
     private val observeIsBpmStartedUseCase: ObserveIsBpmStartedUseCase,
+    private val observeBpmVarianceLowerUseCase: ObserveBpmVarianceLowerUseCase,
+    private val observeBpmVarianceHigherUseCase: ObserveBpmVarianceHigherUseCase,
     private val setFixBpmUseCase: SetFixBpmUseCase,
+    private val setBpmVarianceUseCase: SetBpmVarianceUseCase,
     private val startBpmUseCase: StartBpmUseCase,
     private val stopBpmUseCase: StopBpmUseCase
 ) : ViewModel() {
@@ -56,6 +62,18 @@ class HeartRateViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isBpmStarted = isStarted)
             }
         }
+
+        viewModelScope.launch {
+            observeBpmVarianceLowerUseCase().collect { lower ->
+                _uiState.value = _uiState.value.copy(bpmVarianceLower = lower)
+            }
+        }
+
+        viewModelScope.launch {
+            observeBpmVarianceHigherUseCase().collect { higher ->
+                _uiState.value = _uiState.value.copy(bpmVarianceHigher = higher)
+            }
+        }
     }
 
     fun setFixBpm(setBpmEnable: Boolean, bpm: Int) {
@@ -68,10 +86,13 @@ class HeartRateViewModel @Inject constructor(
         }
     }
 
-    fun setVarianceBpm(bpmVariance: Int) {
-        _uiState.value = _uiState.value.copy(bpmVariance = bpmVariance)
+    fun setBpmVariance(lower: Int, higher: Int) {
+        _uiState.value = _uiState.value.copy(
+            bpmVarianceLower = lower,
+            bpmVarianceHigher = higher
+        )
         viewModelScope.launch {
-
+            setBpmVarianceUseCase(lower, higher)
         }
     }
 

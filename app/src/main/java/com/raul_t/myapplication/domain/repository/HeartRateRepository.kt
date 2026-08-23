@@ -17,7 +17,9 @@ interface HeartRateRepository {
 
     fun observeIsBpmStarted(): Flow<Boolean>
 
-    fun setBpmVariance(bpmVariance: Int)
+    fun setBpmVariance(lower: Int, higher: Int)
 
-    fun observeBpmVariance(): Flow<Int>
+    fun observeBpmVarianceLower(): Flow<Int>
+
+    fun observeBpmVarianceHigher(): Flow<Int>
 }

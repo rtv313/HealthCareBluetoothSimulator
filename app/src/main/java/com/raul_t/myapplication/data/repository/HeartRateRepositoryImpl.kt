@@ -39,11 +39,15 @@ class HeartRateRepositoryImpl @Inject constructor(
         return dataSource.isBpmStarted
     }
 
-    override fun setBpmVariance(bpmVariance: Int) {
-        dataSource.setBpmVariance(bpmVariance)
+    override fun setBpmVariance(lower: Int, higher: Int) {
+        dataSource.setBpmVariance(lower, higher)
     }
 
-    override fun observeBpmVariance(): Flow<Int> {
+    override fun observeBpmVarianceLower(): Flow<Int> {
         return dataSource.bpmVarianceLower
+    }
+
+    override fun observeBpmVarianceHigher(): Flow<Int> {
+        return dataSource.bpmVarianceHigher
     }
 }

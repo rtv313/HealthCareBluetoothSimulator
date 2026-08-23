@@ -36,8 +36,11 @@ import kotlin.math.round
 fun FixBpmControls(
     isFixBpmEnabled: Boolean,
     targetBpm: Int,
+    bpmVarianceLower: Int,
+    bpmVarianceHigher: Int,
     onFixBpmToggled: (Boolean) -> Unit,
     onBpmChanged: (Int) -> Unit,
+    onVarianceChanged: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -108,7 +111,11 @@ fun FixBpmControls(
                         inactiveTickColor = SuccessGreen.copy(alpha = 0.24f),
                     )
                 )
-                RangeSliderBpmVariance()
+                RangeSliderBpmVariance(
+                    lower = bpmVarianceLower,
+                    higher = bpmVarianceHigher,
+                    onVarianceChanged = onVarianceChanged
+                )
             }
         }
     }
@@ -116,14 +123,18 @@ fun FixBpmControls(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RangeSliderBpmVariance() {
-    var sliderPosition by remember { mutableStateOf(0f..15f) }
+fun RangeSliderBpmVariance(
+    lower: Int,
+    higher: Int,
+    onVarianceChanged: (Int, Int) -> Unit
+) {
+    val sliderPosition = lower.toFloat()..higher.toFloat()
 
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.Start
     ) {
-        Text(text = "BPM Variance range: ${round(sliderPosition.start)} - ${round(sliderPosition.endInclusive)}",
+        Text(text = "BPM Variance range: $lower - $higher",
              style = MaterialTheme.typography.bodyMedium)
 
         RangeSlider(
@@ -148,7 +159,7 @@ fun RangeSliderBpmVariance() {
                 )
             },
             value = sliderPosition,
-            onValueChange = { sliderPosition = it },
+            onValueChange = { onVarianceChanged(it.start.toInt(), it.endInclusive.toInt()) },
             valueRange = 0f..30f,
             steps = 30,
             enabled = true,
