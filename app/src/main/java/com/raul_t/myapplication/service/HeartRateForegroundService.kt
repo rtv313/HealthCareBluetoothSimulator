@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -55,5 +56,11 @@ class HeartRateForegroundService : Service() {
             }
         }
         return START_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("HeartRateService", "onDestroy")
+        serviceScope.cancel()
     }
 }

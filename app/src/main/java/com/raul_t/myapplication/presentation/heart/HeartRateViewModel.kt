@@ -1,17 +1,13 @@
 package com.raul_t.myapplication.presentation.heart
 
-import android.content.Context
-import android.content.Intent
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raul_t.myapplication.domain.model.SimulationConfig
 import com.raul_t.myapplication.domain.usecase.ObserveHeartRateUseCase
 import com.raul_t.myapplication.domain.usecase.ObserveSimulationConfigUseCase
 import com.raul_t.myapplication.domain.usecase.UpdateSimulationConfigUseCase
-import com.raul_t.myapplication.service.HeartRateForegroundService
+import com.raul_t.myapplication.service.HeartRateServiceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -20,7 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HeartRateViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val serviceManager: HeartRateServiceManager,
     private val observeHeartRateUseCase: ObserveHeartRateUseCase,
     private val observeSimulationConfigUseCase: ObserveSimulationConfigUseCase,
     private val updateSimulationConfigUseCase: UpdateSimulationConfigUseCase
@@ -32,9 +28,6 @@ class HeartRateViewModel @Inject constructor(
     private var currentConfig = SimulationConfig()
 
     init {
-        val intent = Intent(context, HeartRateForegroundService::class.java)
-        ContextCompat.startForegroundService(context, intent)
-
         viewModelScope.launch {
             observeHeartRateUseCase().collect { heartRate ->
                 _uiState.update { it.copy(bpm = heartRate.bpm) }
@@ -59,10 +52,12 @@ class HeartRateViewModel @Inject constructor(
     }
 
     fun startBpm() {
+        serviceManager.startService()
         updateConfig(currentConfig.copy(isBpmStarted = true))
     }
 
     fun stopBpm() {
+        serviceManager.stopService()
         updateConfig(currentConfig.copy(isBpmStarted = false))
     }
 
