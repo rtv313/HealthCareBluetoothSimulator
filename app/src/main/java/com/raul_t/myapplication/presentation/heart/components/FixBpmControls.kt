@@ -25,12 +25,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.raul_t.myapplication.R
-import com.raul_t.myapplication.ui.theme.SuccessGreen
 import kotlin.math.round
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,19 +63,19 @@ fun FixBpmControls(
                 Text(
                     text = if (isFixBpmEnabled) stringResource(R.string.manual_control_active) else stringResource(R.string.random_simulation_active),
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isFixBpmEnabled) SuccessGreen else MaterialTheme.colorScheme.onSurface,
+                    color = if (isFixBpmEnabled) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
                 )
             }
             Switch(
                 checked = isFixBpmEnabled,
                 onCheckedChange = onFixBpmToggled,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = SuccessGreen,
-                    checkedTrackColor = Color.White,
-                    checkedBorderColor = SuccessGreen,
-                    uncheckedThumbColor = SuccessGreen.copy(alpha = 0.24f),
-                    uncheckedTrackColor = SuccessGreen.copy(alpha = 0.24f),
-                    uncheckedBorderColor = SuccessGreen.copy(alpha = 0.24f)
+                    checkedThumbColor = MaterialTheme.colorScheme.outline,
+                    checkedTrackColor = MaterialTheme.colorScheme.surface,
+                    checkedBorderColor = MaterialTheme.colorScheme.outline,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f),
+                    uncheckedTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f),
+                    uncheckedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f)
                 )
             )
         }
@@ -98,7 +96,7 @@ fun FixBpmControls(
                                 .size(24.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    color = SuccessGreen,
+                                    color = MaterialTheme.colorScheme.outline,
                                 )
                         )
                     },
@@ -107,10 +105,10 @@ fun FixBpmControls(
                     valueRange = 40f..200f,
                     steps = 160,
                     colors = SliderDefaults.colors(
-                        activeTrackColor = SuccessGreen,
-                        inactiveTrackColor = SuccessGreen.copy(alpha = 0.24f),
-                        activeTickColor = SuccessGreen,
-                        inactiveTickColor = SuccessGreen.copy(alpha = 0.24f),
+                        activeTrackColor = MaterialTheme.colorScheme.outline,
+                        inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f),
+                        activeTickColor = MaterialTheme.colorScheme.outline,
+                        inactiveTickColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f),
                     )
                 )
                 RangeSliderBpmVariance(
@@ -146,7 +144,7 @@ fun RangeSliderBpmVariance(
                         .size(24.dp)
                         .clip(CircleShape)
                         .background(
-                            color = SuccessGreen,
+                            color = MaterialTheme.colorScheme.outline,
                         )
                 )
             },
@@ -156,7 +154,7 @@ fun RangeSliderBpmVariance(
                         .size(24.dp)
                         .clip(CircleShape)
                         .background(
-                            color = SuccessGreen,
+                            color = MaterialTheme.colorScheme.outline,
                         )
                 )
             },
@@ -166,10 +164,10 @@ fun RangeSliderBpmVariance(
             steps = 30,
             enabled = true,
             colors = SliderDefaults.colors(
-                activeTrackColor = SuccessGreen,
-                inactiveTrackColor = SuccessGreen.copy(alpha = 0.24f),
-                activeTickColor = SuccessGreen,
-                inactiveTickColor = SuccessGreen.copy(alpha = 0.24f),
+                activeTrackColor = MaterialTheme.colorScheme.outline,
+                inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f),
+                activeTickColor = MaterialTheme.colorScheme.outline,
+                inactiveTickColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f),
             )
         )
     }
