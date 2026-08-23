@@ -19,7 +19,7 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = DarkGrey,
     outline = SuccessGreen,
     error = HeartRed,
-    onSurface = Color.White,
+    onSurface = White,
     background = BlackBackground,
     onBackground = OffWhite
 )
@@ -28,12 +28,12 @@ private val LightColorScheme = lightColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
     tertiary = Pink40,
-    surfaceVariant = Color.LightGray,
+    surfaceVariant = LightGrey,
     outline = SuccessGreen,
     error = HeartRed,
-    onSurface = Color.Black,
-    background = Color.White,
-    onBackground = Color.Black
+    onSurface = Black,
+    background = White,
+    onBackground = Black
 )
 
 @Composable

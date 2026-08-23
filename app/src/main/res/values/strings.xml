@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">My Application</string>
+    <string name="heart_rate_monitor_title">Heart Rate Monitor</string>
+    <string name="bpm_unit"> BPM</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="fix_bpm_simulation">Fix BPM Simulation</string>
+    <string name="manual_control_active">Manual Control Active</string>
+    <string name="random_simulation_active">Random Simulation Active</string>
+    <string name="target_bpm">Target BPM</string>
+    <string name="bpm_variance_range">BPM Variance range: %1$d - %2$d</string>
+    <string name="bpm_change_rate">BPM Change Rate</string>
+    <string name="interval_1_second">1 second</string>
+    <string name="interval_10_seconds">10 seconds</string>
+    <string name="interval_1_minute">1 minute</string>
 </resources>

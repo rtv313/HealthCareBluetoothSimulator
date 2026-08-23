@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -39,27 +40,27 @@ class HeartRateForegroundService : Service() {
         return null
     }
 
-    @RequiresApi(Build.VERSION_CODES.ECLAIR)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("HeartRateService", "onStartCommand")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            Log.d("HeartRateService", "Starting foreground with type")
-            startForeground(
-                101,
-                notificationHelper.createNotification(),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            )
-        } else {
-            Log.d("HeartRateService", "Starting foreground without type")
-            startForeground(101, notificationHelper.createNotification())
-        }
+        Log.d("HeartRateService", "Starting foreground with type")
+        startForeground(
+            101,
+            notificationHelper.createNotification(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        )
 
         serviceScope.launch {
             while (true) {
                 dataSource.createNewHeartRate()
-                delay(1000)
+                delay(dataSource.config.value.updateIntervalMs)
             }
         }
         return START_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("HeartRateService", "onDestroy")
+        serviceScope.cancel()
     }
 }

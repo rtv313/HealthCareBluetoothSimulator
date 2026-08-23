@@ -9,58 +9,58 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.raul_t.myapplication.ui.theme.SuccessGreen
+import com.raul_t.myapplication.R
 
-@Preview
 @Composable
-fun BpmChangeRateControls() {
-    var selectedInterval by remember { mutableIntStateOf(1000) }
-
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(16.dp)) {
-        Text("BPM Change Rate",
+fun BpmChangeRateControls(
+    selectedInterval: Long,
+    onIntervalChanged: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.bpm_change_rate),
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,)
+            color = MaterialTheme.colorScheme.onSurface,
+        )
 
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
             MyRadioButton(
-                selected = selectedInterval == 1000,
-                onClick = { selectedInterval = 1000 }
+                selected = selectedInterval == 1000L,
+                onClick = { onIntervalChanged(1000L) }
             )
-            Text("1 second")
+            Text(stringResource(R.string.interval_1_second))
         }
 
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
             MyRadioButton(
-                selected = selectedInterval == 10000,
-                onClick = { selectedInterval = 10000 }
+                selected = selectedInterval == 10000L,
+                onClick = { onIntervalChanged(10000L) }
             )
-            Text("10 seconds")
+            Text(stringResource(R.string.interval_10_seconds))
         }
 
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             MyRadioButton(
-                selected = selectedInterval == 60000,
-                onClick = { selectedInterval = 60000 }
+                selected = selectedInterval == 60000L,
+                onClick = { onIntervalChanged(60000L) }
             )
-            Text("1 minute")
+            Text(stringResource(R.string.interval_1_minute))
         }
     }
 }
@@ -74,8 +74,17 @@ fun MyRadioButton(
         selected = selected,
         onClick = onClick,
         colors = RadioButtonDefaults.colors(
-            selectedColor = SuccessGreen,
-            unselectedColor = Color.Gray
+            selectedColor = MaterialTheme.colorScheme.outline,
+            unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun BpmChangeRateControlsPreview() {
+    BpmChangeRateControls(
+        selectedInterval = 1000L,
+        onIntervalChanged = {}
     )
 }

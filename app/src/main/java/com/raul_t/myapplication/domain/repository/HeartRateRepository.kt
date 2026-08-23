@@ -1,6 +1,7 @@
 package com.raul_t.myapplication.domain.repository
 
 import com.raul_t.myapplication.domain.model.HeartRate
+import com.raul_t.myapplication.domain.model.SimulationConfig
 import kotlinx.coroutines.flow.Flow
 
 interface HeartRateRepository {
@@ -9,6 +10,7 @@ interface HeartRateRepository {
 
     suspend fun getHeartRate(): HeartRate
 
-    suspend fun setHeartRate(setBpmEnable: Boolean,bpm: Int)
+    fun observeSimulationConfig(): Flow<SimulationConfig>
 
+    suspend fun updateSimulationConfig(config: SimulationConfig)
 }
