@@ -5,8 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.raul_t.myapplication.domain.model.SimulationConfig
 import com.raul_t.myapplication.domain.usecase.ObserveHeartRateUseCase
 import com.raul_t.myapplication.domain.usecase.ObserveSimulationConfigUseCase
+import com.raul_t.myapplication.domain.usecase.StartHeartRateServiceUseCase
+import com.raul_t.myapplication.domain.usecase.StopHeartRateServiceUseCase
 import com.raul_t.myapplication.domain.usecase.UpdateSimulationConfigUseCase
-import com.raul_t.myapplication.service.HeartRateServiceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HeartRateViewModel @Inject constructor(
-    private val serviceManager: HeartRateServiceManager,
+    private val startHeartRateServiceUseCase: StartHeartRateServiceUseCase,
+    private val stopHeartRateServiceUseCase: StopHeartRateServiceUseCase,
     private val observeHeartRateUseCase: ObserveHeartRateUseCase,
     private val observeSimulationConfigUseCase: ObserveSimulationConfigUseCase,
     private val updateSimulationConfigUseCase: UpdateSimulationConfigUseCase
@@ -52,12 +54,12 @@ class HeartRateViewModel @Inject constructor(
     }
 
     fun startBpm() {
-        serviceManager.startService()
+        startHeartRateServiceUseCase()
         updateConfig(currentConfig.copy(isBpmStarted = true))
     }
 
     fun stopBpm() {
-        serviceManager.stopService()
+        stopHeartRateServiceUseCase()
         updateConfig(currentConfig.copy(isBpmStarted = false))
     }
 
