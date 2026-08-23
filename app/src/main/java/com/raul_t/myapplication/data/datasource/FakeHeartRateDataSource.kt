@@ -1,8 +1,10 @@
 package com.raul_t.myapplication.data.datasource
 
+import com.raul_t.myapplication.domain.model.SimulationConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.random.Random
@@ -13,28 +15,22 @@ class FakeHeartRateDataSource @Inject constructor() {
     private val _currentBpm = MutableStateFlow(0)
     val currentBpm: StateFlow<Int> = _currentBpm.asStateFlow()
 
-    private var setBpm = 0
-    private var setBpmEnable = false
-
-    private val _bpmVarianceLower = MutableStateFlow(0)
-    val bpmVarianceLower: StateFlow<Int> = _bpmVarianceLower.asStateFlow()
-
-    private val _bpmVarianceHigher = MutableStateFlow(0)
-    val bpmVarianceHigher: StateFlow<Int> = _bpmVarianceHigher.asStateFlow()
-
-
-    private val _isBpmStarted = MutableStateFlow(false)
-    val isBpmStarted: StateFlow<Boolean> = _isBpmStarted.asStateFlow()
-
+    private val _config = MutableStateFlow(SimulationConfig())
+    val config: StateFlow<SimulationConfig> = _config.asStateFlow()
 
     fun createNewHeartRate() {
-        if (!isBpmStarted.value) return
+        val currentConfig = _config.value
+        if (!currentConfig.isBpmStarted) return
 
-        if (!setBpmEnable) {
+        if (!currentConfig.isFixBpmEnabled) {
             _currentBpm.value = Random.nextInt(50, 101)
         } else {
-            _currentBpm.value =
-                setBpm + Random.nextInt(bpmVarianceLower.value, bpmVarianceHigher.value)
+            val variance = if (currentConfig.varianceLower < currentConfig.varianceHigher) {
+                Random.nextInt(currentConfig.varianceLower, currentConfig.varianceHigher + 1)
+            } else {
+                0
+            }
+            _currentBpm.value = currentConfig.targetBpm + variance
         }
     }
 
@@ -42,25 +38,21 @@ class FakeHeartRateDataSource @Inject constructor() {
         return _currentBpm.value
     }
 
-    fun setHeartRate(setBpmEnable: Boolean,bpm: Int) {
-        this.setBpmEnable = setBpmEnable
-        setBpm = bpm
-
-        if (setBpmEnable) {
-            _currentBpm.value = setBpm
+    fun updateConfig(newConfig: SimulationConfig) {
+        _config.value = newConfig
+        
+        // If fix BPM is enabled, update current BPM immediately to reflect the target
+        if (newConfig.isFixBpmEnabled) {
+            _currentBpm.value = newConfig.targetBpm
         }
     }
-
-    fun startBpm() {
-        _isBpmStarted.value = true
-    }
-
-    fun stopBpm() {
-        _isBpmStarted.value = false
-    }
-
-    fun setBpmVariance(bpmVarianceLower: Int, bpmVarianceHigher: Int) {
-        _bpmVarianceLower.value = bpmVarianceLower
-        _bpmVarianceHigher.value = bpmVarianceHigher
+    
+    fun updateConfig(update: (SimulationConfig) -> SimulationConfig) {
+        _config.update(update)
+        
+        val newConfig = _config.value
+        if (newConfig.isFixBpmEnabled) {
+            _currentBpm.value = newConfig.targetBpm
+        }
     }
 }

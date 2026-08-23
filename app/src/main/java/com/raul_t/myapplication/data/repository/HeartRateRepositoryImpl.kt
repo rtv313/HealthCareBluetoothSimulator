@@ -2,6 +2,7 @@ package com.raul_t.myapplication.data.repository
 
 import com.raul_t.myapplication.data.datasource.FakeHeartRateDataSource
 import com.raul_t.myapplication.domain.model.HeartRate
+import com.raul_t.myapplication.domain.model.SimulationConfig
 import com.raul_t.myapplication.domain.repository.HeartRateRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -23,31 +24,11 @@ class HeartRateRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun setHeartRate(setBpmEnable: Boolean,bpm: Int) {
-        dataSource.setHeartRate(setBpmEnable,bpm)
+    override fun observeSimulationConfig(): Flow<SimulationConfig> {
+        return dataSource.config
     }
 
-    override suspend fun startBpm() {
-        dataSource.startBpm()
-    }
-
-    override suspend fun stopBpm() {
-        dataSource.stopBpm()
-    }
-
-    override fun observeIsBpmStarted(): Flow<Boolean> {
-        return dataSource.isBpmStarted
-    }
-
-    override fun setBpmVariance(lower: Int, higher: Int) {
-        dataSource.setBpmVariance(lower, higher)
-    }
-
-    override fun observeBpmVarianceLower(): Flow<Int> {
-        return dataSource.bpmVarianceLower
-    }
-
-    override fun observeBpmVarianceHigher(): Flow<Int> {
-        return dataSource.bpmVarianceHigher
+    override suspend fun updateSimulationConfig(config: SimulationConfig) {
+        dataSource.updateConfig(config)
     }
 }
