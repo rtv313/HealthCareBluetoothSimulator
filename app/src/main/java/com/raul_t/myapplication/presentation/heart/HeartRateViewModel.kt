@@ -68,6 +68,13 @@ class HeartRateViewModel @Inject constructor(
         }
     }
 
+    fun setVarianceBpm(bpmVariance: Int) {
+        _uiState.value = _uiState.value.copy(bpmVariance = bpmVariance)
+        viewModelScope.launch {
+
+        }
+    }
+
     fun startBpm() {
         viewModelScope.launch {
             startBpmUseCase()

@@ -16,4 +16,8 @@ interface HeartRateRepository {
     suspend fun stopBpm()
 
     fun observeIsBpmStarted(): Flow<Boolean>
+
+    fun setBpmVariance(bpmVariance: Int)
+
+    fun observeBpmVariance(): Flow<Int>
 }
