@@ -16,6 +16,8 @@ class FakeHeartRateDataSource @Inject constructor() {
     private var setBpm = 0
     private var setBpmEnable = false
 
+    private var startBpm = false
+
     fun createNewHeartRate() {
         if (!setBpmEnable) {
             _currentBpm.value = Random.nextInt(50, 101)
@@ -36,5 +38,13 @@ class FakeHeartRateDataSource @Inject constructor() {
         if (setBpmEnable) {
             _currentBpm.value = setBpm
         }
+    }
+
+    fun startBpm() {
+        startBpm = true
+    }
+
+    fun stopBpm() {
+        startBpm = false
     }
 }

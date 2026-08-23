@@ -55,4 +55,8 @@ class HeartRateViewModel @Inject constructor(
             setFixBpmUseCase(setBpmEnable, bpm)
         }
     }
+
+    fun startBpm() {
+
+    }
 }

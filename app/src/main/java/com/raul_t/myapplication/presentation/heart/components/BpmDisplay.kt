@@ -30,8 +30,8 @@ fun BpmDisplayPreview() {
 
 @Composable
 fun BpmDisplay(
-    bpm: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bpm: Int = 0
 ) {
     Card(
         colors = CardDefaults.cardColors(

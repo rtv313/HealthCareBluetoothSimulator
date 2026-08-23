@@ -11,4 +11,5 @@ interface HeartRateRepository {
 
     suspend fun setHeartRate(setBpmEnable: Boolean,bpm: Int)
 
+    suspend fun startBpm()
 }
