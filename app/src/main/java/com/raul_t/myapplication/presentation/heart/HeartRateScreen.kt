@@ -17,12 +17,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.raul_t.myapplication.R
+import com.raul_t.myapplication.core.util.PermissionUtils
 import com.raul_t.myapplication.presentation.heart.components.BpmChangeRateControls
 import com.raul_t.myapplication.presentation.heart.components.BpmDisplay
 import com.raul_t.myapplication.presentation.heart.components.BpmStartStopButton
@@ -33,6 +35,7 @@ import com.raul_t.myapplication.ui.theme.MyApplicationTheme
 
 @Composable
 fun HeartRateScreen(
+    onRequestNotificationPermission: () -> Unit,
     viewModel: HeartRateViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -43,7 +46,8 @@ fun HeartRateScreen(
         onStopBpm = viewModel::stopBpm,
         onSetFixBpm = viewModel::setFixBpm,
         onSetBpmVariance = viewModel::setBpmVariance,
-        onSetUpdateInterval = viewModel::setUpdateInterval
+        onSetUpdateInterval = viewModel::setUpdateInterval,
+        onRequestNotificationPermission = onRequestNotificationPermission
     )
 }
 
@@ -54,9 +58,11 @@ fun HeartRateContent(
     onStopBpm: () -> Unit,
     onSetFixBpm: (Boolean, Int) -> Unit,
     onSetBpmVariance: (Int, Int) -> Unit,
-    onSetUpdateInterval: (Long) -> Unit
+    onSetUpdateInterval: (Long) -> Unit,
+    onRequestNotificationPermission: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -96,7 +102,11 @@ fun HeartRateContent(
                         if (uiState.isBpmStarted) {
                             onStopBpm()
                         } else {
-                            onStartBpm()
+                            if (PermissionUtils.hasNotificationPermission(context)) {
+                                onStartBpm()
+                            } else {
+                                onRequestNotificationPermission()
+                            }
                         }
                     }
                 )
@@ -148,7 +158,8 @@ fun HeartRateScreenPreview() {
             onStopBpm = {},
             onSetFixBpm = { _, _ -> },
             onSetBpmVariance = { _, _ -> },
-            onSetUpdateInterval = {}
+            onSetUpdateInterval = {},
+            onRequestNotificationPermission = {}
         )
     }
 }
