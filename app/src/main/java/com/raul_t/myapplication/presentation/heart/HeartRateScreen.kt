@@ -63,7 +63,16 @@ fun HeartRateScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                BpmStartStopButton()
+                BpmStartStopButton(
+                    isStarted = uiState.isBpmStarted,
+                    onToggle = {
+                        if (uiState.isBpmStarted) {
+                            viewModel.stopBpm()
+                        } else {
+                            viewModel.startBpm()
+                        }
+                    }
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 

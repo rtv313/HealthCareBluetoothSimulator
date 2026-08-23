@@ -21,21 +21,23 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.raul_t.myapplication.ui.theme.SuccessGreen
 
-@Preview
 @Composable
-fun BpmStartStopButton() {
-
-    var isRunning by remember { mutableStateOf(false) }
+fun BpmStartStopButton(
+    isStarted: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Button(
-        onClick = { isRunning = !isRunning },
+        onClick = onToggle,
         colors = ButtonDefaults.buttonColors(
-            containerColor = SuccessGreen,
+            containerColor = if (isStarted) Color.Red else SuccessGreen,
             contentColor = Color.White
         ),
-        shape = RoundedCornerShape(4.dp)
+        shape = RoundedCornerShape(4.dp),
+        modifier = modifier
     ) {
         Icon(
-            imageVector = if (isRunning) {
+            imageVector = if (isStarted) {
                 Icons.Default.Stop
             } else {
                 Icons.Default.PlayArrow
@@ -46,7 +48,17 @@ fun BpmStartStopButton() {
         Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
 
         Text(
-            text = if (isRunning) "Stop" else "Start"
+            text = if (isStarted) "Stop" else "Start"
         )
     }
+}
+
+@Preview
+@Composable
+fun BpmStartStopButtonPreview() {
+    var isStarted by remember { mutableStateOf(false) }
+    BpmStartStopButton(
+        isStarted = isStarted,
+        onToggle = { isStarted = !isStarted }
+    )
 }
