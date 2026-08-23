@@ -6,7 +6,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raul_t.myapplication.domain.usecase.ObserveHeartRateUseCase
+import com.raul_t.myapplication.domain.usecase.ObserveIsBpmStartedUseCase
 import com.raul_t.myapplication.domain.usecase.SetFixBpmUseCase
+import com.raul_t.myapplication.domain.usecase.StartBpmUseCase
+import com.raul_t.myapplication.domain.usecase.StopBpmUseCase
 import com.raul_t.myapplication.service.HeartRateForegroundService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -19,7 +22,10 @@ import javax.inject.Inject
 class HeartRateViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val observeHeartRateUseCase: ObserveHeartRateUseCase,
-    private val setFixBpmUseCase: SetFixBpmUseCase
+    private val observeIsBpmStartedUseCase: ObserveIsBpmStartedUseCase,
+    private val setFixBpmUseCase: SetFixBpmUseCase,
+    private val startBpmUseCase: StartBpmUseCase,
+    private val stopBpmUseCase: StopBpmUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -44,6 +50,12 @@ class HeartRateViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(bpm = heartRate.bpm)
             }
         }
+
+        viewModelScope.launch {
+            observeIsBpmStartedUseCase().collect { isStarted ->
+                _uiState.value = _uiState.value.copy(isBpmStarted = isStarted)
+            }
+        }
     }
 
     fun setFixBpm(setBpmEnable: Boolean, bpm: Int) {
@@ -57,6 +69,14 @@ class HeartRateViewModel @Inject constructor(
     }
 
     fun startBpm() {
+        viewModelScope.launch {
+            startBpmUseCase()
+        }
+    }
 
+    fun stopBpm() {
+        viewModelScope.launch {
+            stopBpmUseCase()
+        }
     }
 }

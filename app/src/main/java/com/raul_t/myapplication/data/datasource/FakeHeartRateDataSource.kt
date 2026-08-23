@@ -16,9 +16,12 @@ class FakeHeartRateDataSource @Inject constructor() {
     private var setBpm = 0
     private var setBpmEnable = false
 
-    private var startBpm = false
+    private val _isBpmStarted = MutableStateFlow(false)
+    val isBpmStarted: StateFlow<Boolean> = _isBpmStarted.asStateFlow()
 
     fun createNewHeartRate() {
+        if (!isBpmStarted.value) return
+
         if (!setBpmEnable) {
             _currentBpm.value = Random.nextInt(50, 101)
         }
@@ -41,10 +44,10 @@ class FakeHeartRateDataSource @Inject constructor() {
     }
 
     fun startBpm() {
-        startBpm = true
+        _isBpmStarted.value = true
     }
 
     fun stopBpm() {
-        startBpm = false
+        _isBpmStarted.value = false
     }
 }

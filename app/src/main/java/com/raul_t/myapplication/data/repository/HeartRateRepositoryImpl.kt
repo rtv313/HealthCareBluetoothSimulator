@@ -30,4 +30,12 @@ class HeartRateRepositoryImpl @Inject constructor(
     override suspend fun startBpm() {
         dataSource.startBpm()
     }
+
+    override suspend fun stopBpm() {
+        dataSource.stopBpm()
+    }
+
+    override fun observeIsBpmStarted(): Flow<Boolean> {
+        return dataSource.isBpmStarted
+    }
 }
