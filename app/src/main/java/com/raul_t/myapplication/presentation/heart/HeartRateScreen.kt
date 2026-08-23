@@ -40,7 +40,8 @@ fun HeartRateScreen(
         onStartBpm = viewModel::startBpm,
         onStopBpm = viewModel::stopBpm,
         onSetFixBpm = viewModel::setFixBpm,
-        onSetBpmVariance = viewModel::setBpmVariance
+        onSetBpmVariance = viewModel::setBpmVariance,
+        onSetUpdateInterval = viewModel::setUpdateInterval
     )
 }
 
@@ -50,7 +51,8 @@ fun HeartRateContent(
     onStartBpm: () -> Unit,
     onStopBpm: () -> Unit,
     onSetFixBpm: (Boolean, Int) -> Unit,
-    onSetBpmVariance: (Int, Int) -> Unit
+    onSetBpmVariance: (Int, Int) -> Unit,
+    onSetUpdateInterval: (Long) -> Unit
 ) {
     val scrollState = rememberScrollState()
 
@@ -118,7 +120,10 @@ fun HeartRateContent(
 
             HorizontalDivider()
 
-            BpmChangeRateControls()
+            BpmChangeRateControls(
+                selectedInterval = uiState.updateIntervalMs,
+                onIntervalChanged = onSetUpdateInterval
+            )
         }
     }
 }
@@ -134,12 +139,14 @@ fun HeartRateScreenPreview() {
                 isFixBpmEnabled = false,
                 targetBpm = 80,
                 bpmVarianceLower = 5,
-                bpmVarianceHigher = 10
+                bpmVarianceHigher = 10,
+                updateIntervalMs = 1000L
             ),
             onStartBpm = {},
             onStopBpm = {},
             onSetFixBpm = { _, _ -> },
-            onSetBpmVariance = { _, _ -> }
+            onSetBpmVariance = { _, _ -> },
+            onSetUpdateInterval = {}
         )
     }
 }

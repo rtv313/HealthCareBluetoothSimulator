@@ -50,7 +50,8 @@ class HeartRateViewModel @Inject constructor(
                         isFixBpmEnabled = config.isFixBpmEnabled,
                         targetBpm = config.targetBpm,
                         bpmVarianceLower = config.varianceLower,
-                        bpmVarianceHigher = config.varianceHigher
+                        bpmVarianceHigher = config.varianceHigher,
+                        updateIntervalMs = config.updateIntervalMs
                     )
                 }
             }
@@ -71,6 +72,10 @@ class HeartRateViewModel @Inject constructor(
 
     fun setBpmVariance(lower: Int, higher: Int) {
         updateConfig(currentConfig.copy(varianceLower = lower, varianceHigher = higher))
+    }
+
+    fun setUpdateInterval(intervalMs: Long) {
+        updateConfig(currentConfig.copy(updateIntervalMs = intervalMs))
     }
 
     private fun updateConfig(config: SimulationConfig) {

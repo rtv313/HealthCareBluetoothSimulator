@@ -5,5 +5,6 @@ data class SimulationConfig(
     val isFixBpmEnabled: Boolean = false,
     val targetBpm: Int = 80,
     val varianceLower: Int = 0,
-    val varianceHigher: Int = 0
+    val varianceHigher: Int = 0,
+    val updateIntervalMs: Long = 1000L
 )
