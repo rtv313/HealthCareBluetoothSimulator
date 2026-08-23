@@ -26,11 +26,30 @@ import com.raul_t.myapplication.presentation.heart.components.BpmDisplay
 import com.raul_t.myapplication.presentation.heart.components.BpmStartStopButton
 import com.raul_t.myapplication.presentation.heart.components.FixBpmControls
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.raul_t.myapplication.ui.theme.MyApplicationTheme
+
 @Composable
 fun HeartRateScreen(
     viewModel: HeartRateViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    HeartRateContent(
+        uiState = uiState,
+        onStartBpm = viewModel::startBpm,
+        onStopBpm = viewModel::stopBpm,
+        onSetFixBpm = viewModel::setFixBpm
+    )
+}
+
+@Composable
+fun HeartRateContent(
+    uiState: HeartRateUiState,
+    onStartBpm: () -> Unit,
+    onStopBpm: () -> Unit,
+    onSetFixBpm: (Boolean, Int) -> Unit
+) {
     val scrollState = rememberScrollState()
 
     Scaffold(
@@ -38,11 +57,13 @@ fun HeartRateScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
 
-        Column(modifier = Modifier
-            .padding(innerPadding)
-            .padding(24.dp)
-            .fillMaxSize()
-            .verticalScroll(scrollState)) {
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(24.dp)
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+        ) {
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -67,9 +88,9 @@ fun HeartRateScreen(
                     isStarted = uiState.isBpmStarted,
                     onToggle = {
                         if (uiState.isBpmStarted) {
-                            viewModel.stopBpm()
+                            onStopBpm()
                         } else {
-                            viewModel.startBpm()
+                            onStartBpm()
                         }
                     }
                 )
@@ -82,10 +103,10 @@ fun HeartRateScreen(
                     isFixBpmEnabled = uiState.isFixBpmEnabled,
                     targetBpm = uiState.targetBpm,
                     onFixBpmToggled = { enabled ->
-                        viewModel.setFixBpm(enabled, uiState.targetBpm)
+                        onSetFixBpm(enabled, uiState.targetBpm)
                     },
                     onBpmChanged = { bpm ->
-                        viewModel.setFixBpm(uiState.isFixBpmEnabled, bpm)
+                        onSetFixBpm(uiState.isFixBpmEnabled, bpm)
                     }
                 )
             }
@@ -94,5 +115,23 @@ fun HeartRateScreen(
 
             BpmChangeRateControls()
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HeartRateScreenPreview() {
+    MyApplicationTheme {
+        HeartRateContent(
+            uiState = HeartRateUiState(
+                bpm = 75,
+                isBpmStarted = true,
+                isFixBpmEnabled = false,
+                targetBpm = 80
+            ),
+            onStartBpm = {},
+            onStopBpm = {},
+            onSetFixBpm = { _, _ -> }
+        )
     }
 }
