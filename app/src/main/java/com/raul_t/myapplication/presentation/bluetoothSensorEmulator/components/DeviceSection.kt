@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -13,7 +14,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.raul_t.myapplication.ui.theme.MyApplicationTheme
 
 @Composable
 fun DeviceSection() {
@@ -36,7 +39,12 @@ fun DeviceSection() {
             value = text,
             onValueChange = { text = it },
             label = { Text("Device name") },
-            placeholder = { Text("Write the device name") }
+            placeholder = { Text("Write the device name") },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedLabelColor = MaterialTheme.colorScheme.outline,
+                cursorColor = MaterialTheme.colorScheme.outline
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -44,5 +52,13 @@ fun DeviceSection() {
         SensorStateDropdown()
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DeviceSectionPreview() {
+    MyApplicationTheme {
+        DeviceSection()
     }
 }
