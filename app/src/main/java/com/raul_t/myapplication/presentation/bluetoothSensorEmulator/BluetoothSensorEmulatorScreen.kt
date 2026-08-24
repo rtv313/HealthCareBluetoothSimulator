@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -25,43 +23,35 @@ fun SensorEmitterScreen() {
 
     val scrollState = rememberScrollState()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background
-    ) { innerPadding ->
+    Column(
+        modifier = Modifier
+            .padding(24.dp)
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+    ) {
 
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .padding(24.dp)
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-        ) {
+        Text(
+            text = "Bluetooth Sensor Emulator",
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold
+        )
 
-            Text(
-                text = "Bluetooth Sensor Emulator",
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
-            )
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+        DeviceSection()
 
-            DeviceSection()
+        HorizontalDivider()
 
-            HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+        BluetoothSection()
 
-            BluetoothSection()
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider()
 
-            HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SecuritySection()
-        }
+        SecuritySection()
     }
 }

@@ -61,22 +61,16 @@ fun HeartRateContent(
 ) {
     val scrollState = rememberScrollState()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background
-    ) { innerPadding ->
+    Column(
+        modifier = Modifier
+            .padding(24.dp)
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+    ) {
 
         Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .padding(24.dp)
-                .fillMaxSize()
-                .verticalScroll(scrollState)
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
                 Text(
                     text = stringResource(R.string.heart_rate_monitor_title),
                     color = MaterialTheme.colorScheme.onBackground,
@@ -131,7 +125,6 @@ fun HeartRateContent(
                 onIntervalChanged = onSetUpdateInterval
             )
         }
-    }
 }
 
 @Preview(showBackground = true)
