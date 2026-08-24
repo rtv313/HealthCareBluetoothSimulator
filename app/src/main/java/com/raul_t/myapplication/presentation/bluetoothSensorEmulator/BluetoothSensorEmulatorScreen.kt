@@ -11,9 +11,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.raul_t.myapplication.R
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.components.BluetoothSection
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.components.DeviceSection
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.components.SecuritySection
@@ -31,7 +33,7 @@ fun SensorEmitterScreen() {
     ) {
 
         Text(
-            text = "Bluetooth Sensor Emulator",
+            text = stringResource(R.string.bluetooth_sensor_emulator_title),
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold
         )

@@ -16,9 +16,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.raul_t.myapplication.R
 import com.raul_t.myapplication.ui.theme.MyApplicationTheme
 
 @Composable
@@ -29,7 +31,7 @@ fun DeviceSection() {
         horizontalAlignment = Alignment.Start
     ) {
         Text(
-            text = "Device:",
+            text = stringResource(R.string.device_label),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -45,14 +47,14 @@ fun DeviceSection() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "Name", style = MaterialTheme.typography.titleMedium)
+        Text(text = stringResource(R.string.name_label), style = MaterialTheme.typography.titleMedium)
 
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Device name") },
-            placeholder = { Text("Write the device name") },
+            label = { Text(stringResource(R.string.device_name_hint)) },
+            placeholder = { Text(stringResource(R.string.device_name_placeholder)) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.outline,
                 focusedLabelColor = MaterialTheme.colorScheme.outline,

@@ -9,14 +9,16 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.raul_t.myapplication.R
 
 @Composable
 fun BluetoothSection() {
     Column() {
         Text(
-            text = "Bluetooth:",
+            text = stringResource(R.string.bluetooth_label),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -24,7 +26,7 @@ fun BluetoothSection() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Advertising",
+            text = stringResource(R.string.advertising_label),
             style = MaterialTheme.typography.titleMedium
         )
 
@@ -42,7 +44,7 @@ fun BluetoothSection() {
         )
 
         Text(
-            text = "Allow Connection",
+            text = stringResource(R.string.allow_connection_label),
             style = MaterialTheme.typography.titleMedium
         )
 

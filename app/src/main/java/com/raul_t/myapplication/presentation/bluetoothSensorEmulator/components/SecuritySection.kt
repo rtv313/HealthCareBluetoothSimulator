@@ -9,14 +9,16 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.raul_t.myapplication.R
 
 @Composable
 fun SecuritySection() {
     Column() {
         Text(
-            text = "Security:",
+            text = stringResource(R.string.security_label),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -24,7 +26,7 @@ fun SecuritySection() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Enable PIN",
+            text = stringResource(R.string.enable_pin_label),
             style = MaterialTheme.typography.titleMedium
         )
 

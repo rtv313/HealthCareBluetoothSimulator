@@ -13,4 +13,20 @@
     <string name="interval_1_second">1 second</string>
     <string name="interval_10_seconds">10 seconds</string>
     <string name="interval_1_minute">1 minute</string>
+
+    <!-- Bluetooth Sensor Emulator -->
+    <string name="bluetooth_sensor_emulator_title">Bluetooth Sensor Emulator</string>
+    <string name="device_label">Device:</string>
+    <string name="name_label">Name</string>
+    <string name="device_name_hint">Device name</string>
+    <string name="device_name_placeholder">Write the device name</string>
+    <string name="status_label">Status</string>
+    <string name="status_healthy">Healthy</string>
+    <string name="status_damaged">Damaged</string>
+    <string name="status_offline">Offline</string>
+    <string name="bluetooth_label">Bluetooth:</string>
+    <string name="advertising_label">Advertising</string>
+    <string name="allow_connection_label">Allow Connection</string>
+    <string name="security_label">Security:</string>
+    <string name="enable_pin_label">Enable PIN</string>
 </resources>
