@@ -31,7 +31,7 @@ fun SensorStateDropdown() {
 
     Column(horizontalAlignment = Alignment.Start) {
 
-        Text(text = "Status:", style = MaterialTheme.typography.titleMedium)
+        Text(text = "Status", style = MaterialTheme.typography.titleMedium)
 
         Box(
             modifier = Modifier.fillMaxWidth(),

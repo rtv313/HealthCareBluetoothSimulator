@@ -59,6 +59,8 @@ fun SensorEmitterScreen() {
 
             HorizontalDivider()
 
+            Spacer(modifier = Modifier.height(16.dp))
+
             SecuritySection()
         }
     }
