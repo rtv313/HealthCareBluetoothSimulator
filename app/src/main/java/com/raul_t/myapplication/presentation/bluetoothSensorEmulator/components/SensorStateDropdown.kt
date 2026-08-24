@@ -18,8 +18,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.raul_t.myapplication.R
 import com.raul_t.myapplication.ui.theme.LightSuccessGreen
 import com.raul_t.myapplication.ui.theme.MyApplicationTheme
 
@@ -27,11 +29,14 @@ import com.raul_t.myapplication.ui.theme.MyApplicationTheme
 fun SensorStateDropdown() {
 
     var expanded by remember { mutableStateOf(false) }
-    var selectedOption by remember { mutableStateOf("Healthy") }
+    val healthyLabel = stringResource(R.string.status_healthy)
+    val damagedLabel = stringResource(R.string.status_damaged)
+    val offlineLabel = stringResource(R.string.status_offline)
+    var selectedOption by remember { mutableStateOf(healthyLabel) }
 
     Column(horizontalAlignment = Alignment.Start) {
 
-        Text(text = "Status", style = MaterialTheme.typography.titleMedium)
+        Text(text = stringResource(R.string.status_label), style = MaterialTheme.typography.titleMedium)
 
         Box(
             modifier = Modifier.fillMaxWidth(),
@@ -58,25 +63,25 @@ fun SensorStateDropdown() {
                 containerColor = LightSuccessGreen
             ) {
                 DropdownMenuItem(
-                    text = { Text("Healthy", color = Color.Black) },
+                    text = { Text(healthyLabel, color = Color.Black) },
                     onClick = {
-                        selectedOption = "Healthy"
+                        selectedOption = healthyLabel
                         expanded = false
                     }
                 )
 
                 DropdownMenuItem(
-                    text = { Text("Damaged", color = Color.Black) },
+                    text = { Text(damagedLabel, color = Color.Black) },
                     onClick = {
-                        selectedOption = "Damaged"
+                        selectedOption = damagedLabel
                         expanded = false
                     }
                 )
 
                 DropdownMenuItem(
-                    text = { Text("Offline", color = Color.Black) },
+                    text = { Text(offlineLabel, color = Color.Black) },
                     onClick = {
-                        selectedOption = "Offline"
+                        selectedOption = offlineLabel
                         expanded = false
                     }
                 )

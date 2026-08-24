@@ -19,7 +19,5 @@ val BlackBackground = Color(0xFF121212)
 val OffWhite = Color(0xFFF5F5F5)
 
 // Standard Colors
-val White = Color(0xFFFFFFFF)
-val Black = Color(0xFF000000)
 val LightGrey = Color(0xFFD3D3D3)
 val Grey = Color(0xFF808080)
