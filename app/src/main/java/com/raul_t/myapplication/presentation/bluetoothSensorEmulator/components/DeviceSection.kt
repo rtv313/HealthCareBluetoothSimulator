@@ -1,0 +1,48 @@
+package com.raul_t.myapplication.presentation.bluetoothSensorEmulator.components
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun DeviceSection() {
+    var text by remember { mutableStateOf("") }
+
+    Column(
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(text = "Device", style = MaterialTheme.typography.titleLarge)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        BluetoothStartStopButton()
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(text = "Name", style = MaterialTheme.typography.titleMedium)
+
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            label = { Text("Device name") },
+            placeholder = { Text("Write the device name") }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        SensorStateDropdown()
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
