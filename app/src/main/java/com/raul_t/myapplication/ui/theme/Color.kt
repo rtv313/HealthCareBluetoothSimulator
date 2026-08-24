@@ -13,6 +13,7 @@ val Pink40 = Color(0xFF7D5260)
 // Health Simulator Colors
 val DarkGrey = Color(0xFF252525)
 val SuccessGreen = Color(0xFF2E7D32)
+val LightSuccessGreen = Color(0xFFE8F5E9)
 val HeartRed = Color(0xFFFF0000)
 val BlackBackground = Color(0xFF121212)
 val OffWhite = Color(0xFFF5F5F5)
