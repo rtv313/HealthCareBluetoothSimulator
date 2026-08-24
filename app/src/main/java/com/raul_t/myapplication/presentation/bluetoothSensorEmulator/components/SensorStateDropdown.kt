@@ -17,11 +17,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.raul_t.myapplication.ui.theme.LightSuccessGreen
 import com.raul_t.myapplication.ui.theme.MyApplicationTheme
-import com.raul_t.myapplication.ui.theme.SuccessGreen
 
 @Composable
 fun SensorStateDropdown() {
@@ -58,7 +58,7 @@ fun SensorStateDropdown() {
                 containerColor = LightSuccessGreen
             ) {
                 DropdownMenuItem(
-                    text = { Text("Healthy", color = SuccessGreen) },
+                    text = { Text("Healthy", color = Color.Black) },
                     onClick = {
                         selectedOption = "Healthy"
                         expanded = false
@@ -66,7 +66,7 @@ fun SensorStateDropdown() {
                 )
 
                 DropdownMenuItem(
-                    text = { Text("Damaged", color = SuccessGreen) },
+                    text = { Text("Damaged", color = Color.Black) },
                     onClick = {
                         selectedOption = "Damaged"
                         expanded = false
@@ -74,7 +74,7 @@ fun SensorStateDropdown() {
                 )
 
                 DropdownMenuItem(
-                    text = { Text("Offline", color = SuccessGreen) },
+                    text = { Text("Offline", color = Color.Black) },
                     onClick = {
                         selectedOption = "Offline"
                         expanded = false
