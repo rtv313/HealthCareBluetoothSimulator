@@ -8,6 +8,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.SensorEmitterScreen
 import com.raul_t.myapplication.presentation.heart.HeartRateScreen
 import com.raul_t.myapplication.ui.theme.MyApplicationTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -24,12 +26,13 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContent {
             MyApplicationTheme {
-                HeartRateScreen(
+                /*HeartRateScreen(
                     onRequestNotificationPermission = {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             requestNotificationPermissionLauncher.launch(
@@ -37,7 +40,8 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
-                )
+                )*/
+                SensorEmitterScreen()
             }
         }
     }
