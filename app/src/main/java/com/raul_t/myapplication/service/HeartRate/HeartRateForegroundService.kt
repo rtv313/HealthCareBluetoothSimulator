@@ -1,20 +1,18 @@
-package com.raul_t.myapplication.service
+package com.raul_t.myapplication.service.HeartRate
 
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.os.Build
-import android.util.Log
 import android.os.IBinder
-import androidx.annotation.RequiresApi
+import android.util.Log
 import com.raul_t.myapplication.data.datasource.FakeHeartRateDataSource
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.cancel
 import javax.inject.Inject
 
 @AndroidEntryPoint

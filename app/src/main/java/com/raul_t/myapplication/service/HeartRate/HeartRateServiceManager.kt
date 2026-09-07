@@ -1,4 +1,4 @@
-package com.raul_t.myapplication.service
+package com.raul_t.myapplication.service.HeartRate
 
 import android.content.Context
 import android.content.Intent
