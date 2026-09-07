@@ -23,10 +23,17 @@ import com.raul_t.myapplication.R
 
 @Composable
 fun SetPinDialog(
+    initialPin: String = "0000",
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
 ) {
-    var pinDigits by remember { mutableStateOf(listOf("0", "0", "0", "0")) }
+    var pinDigits by remember { 
+        mutableStateOf(
+            initialPin.map { it.toString() }.take(4).let { 
+                if (it.size < 4) it + List(4 - it.size) { "0" } else it
+            }
+        ) 
+    }
     val focusRequesters = remember { List(4) { FocusRequester() } }
 
     Dialog(onDismissRequest = onDismiss) {
