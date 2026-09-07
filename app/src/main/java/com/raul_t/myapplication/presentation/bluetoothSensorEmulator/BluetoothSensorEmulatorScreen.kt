@@ -49,7 +49,7 @@ fun SensorEmitterScreen(
         DeviceSection(
             name = sensor.name,
             status = sensor.status,
-            isStarted = sensor.start,
+            isStarted = uiState.isServiceRunning,
             onNameChange = viewModel::updateName,
             onStatusChange = viewModel::updateStatus,
             onToggleStart = viewModel::toggleStart

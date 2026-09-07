@@ -1,4 +1,4 @@
-package com.raul_t.myapplication.service.HeartRate
+package com.raul_t.myapplication.service.Bluetooth
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -11,18 +11,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class HeartRateNotificationHelper @Inject constructor(
+class BluetoothNotificationHelper @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val channelId = "heart_rate_service"
+    private val channelId = "bluetooth_sensor_service"
 
     fun createNotificationChannel() {
         val channel = NotificationChannel(
             channelId,
-            context.getString(R.string.heart_rate_notification_channel_name),
-            NotificationManager.IMPORTANCE_HIGH
+            context.getString(R.string.bluetooth_notification_channel_name),
+            NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = context.getString(R.string.heart_rate_notification_channel_description)
+            description = context.getString(R.string.bluetooth_notification_channel_description)
         }
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -31,10 +31,10 @@ class HeartRateNotificationHelper @Inject constructor(
 
     fun createNotification(): Notification {
         return NotificationCompat.Builder(context, channelId)
-            .setContentTitle(context.getString(R.string.heart_rate_notification_title))
-            .setContentText(context.getString(R.string.heart_rate_notification_text))
-            .setSmallIcon(R.drawable.ic_heart)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentTitle(context.getString(R.string.bluetooth_notification_title))
+            .setContentText(context.getString(R.string.bluetooth_notification_text))
+            .setSmallIcon(R.drawable.ic_bluetooth)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
             .build()

@@ -7,6 +7,7 @@ import com.raul_t.myapplication.domain.usecase.ObserveSensorConfigUseCase
 import com.raul_t.myapplication.domain.usecase.StartSensorSimulationUseCase
 import com.raul_t.myapplication.domain.usecase.StopSensorSimulationUseCase
 import com.raul_t.myapplication.domain.usecase.UpdateSensorConfigUseCase
+import com.raul_t.myapplication.service.Bluetooth.BluetoothServiceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +20,8 @@ class BluetoothSensorEmulatorViewModel @Inject constructor(
     private val observeSensorConfigUseCase: ObserveSensorConfigUseCase,
     private val updateSensorConfigUseCase: UpdateSensorConfigUseCase,
     private val startSensorSimulationUseCase: StartSensorSimulationUseCase,
-    private val stopSensorSimulationUseCase: StopSensorSimulationUseCase
+    private val stopSensorSimulationUseCase: StopSensorSimulationUseCase,
+    private val serviceManager: BluetoothServiceManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BluetoothSensorEmulatorUiState())
@@ -31,15 +33,19 @@ class BluetoothSensorEmulatorViewModel @Inject constructor(
                 _uiState.update { it.copy(sensor = sensor) }
             }
         }
+
+        viewModelScope.launch {
+            serviceManager.isServiceRunning.collect { isRunning ->
+                _uiState.update { it.copy(isServiceRunning = isRunning) }
+            }
+        }
     }
 
     fun toggleStart() {
-        viewModelScope.launch {
-            if (_uiState.value.sensor.start) {
-                stopSensorSimulationUseCase()
-            } else {
-                startSensorSimulationUseCase()
-            }
+        if (_uiState.value.isServiceRunning) {
+            stopSensorSimulationUseCase.invoke()
+        } else {
+            startSensorSimulationUseCase.invoke()
         }
     }
 

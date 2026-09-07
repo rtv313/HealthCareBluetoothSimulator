@@ -1,12 +1,12 @@
 package com.raul_t.myapplication.domain.usecase
 
-import com.raul_t.myapplication.domain.repository.SensorRepository
+import com.raul_t.myapplication.service.Bluetooth.BluetoothServiceManager
 import javax.inject.Inject
 
 class StartSensorSimulationUseCase @Inject constructor(
-    private val repository: SensorRepository
+    private val serviceManager: BluetoothServiceManager
 ) {
-    suspend operator fun invoke() {
-        repository.updateSensorConfig { it.copy(start = true) }
+    fun invoke() {
+        serviceManager.startService()
     }
 }

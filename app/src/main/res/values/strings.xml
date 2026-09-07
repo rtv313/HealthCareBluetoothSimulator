@@ -33,4 +33,15 @@
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
     <string name="pin_display">PIN: %1$s</string>
+
+    <!-- Notification Strings -->
+    <string name="heart_rate_notification_channel_name">Heart Rate Simulator</string>
+    <string name="heart_rate_notification_channel_description">Background heart rate simulation service</string>
+    <string name="heart_rate_notification_title">Heart Rate Simulator</string>
+    <string name="heart_rate_notification_text">Generating heart rate data...</string>
+
+    <string name="bluetooth_notification_channel_name">Bluetooth Sensor Simulator</string>
+    <string name="bluetooth_notification_channel_description">Background Bluetooth sensor simulation service</string>
+    <string name="bluetooth_notification_title">Bluetooth Sensor Simulator</string>
+    <string name="bluetooth_notification_text">Emulating Bluetooth Low Energy sensor...</string>
 </resources>
