@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raul_t.myapplication.domain.model.SensorStatus
 import com.raul_t.myapplication.domain.usecase.ObserveSensorConfigUseCase
+import com.raul_t.myapplication.domain.usecase.StartSensorSimulationUseCase
+import com.raul_t.myapplication.domain.usecase.StopSensorSimulationUseCase
 import com.raul_t.myapplication.domain.usecase.UpdateSensorConfigUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +17,9 @@ import javax.inject.Inject
 @HiltViewModel
 class BluetoothSensorEmulatorViewModel @Inject constructor(
     private val observeSensorConfigUseCase: ObserveSensorConfigUseCase,
-    private val updateSensorConfigUseCase: UpdateSensorConfigUseCase
+    private val updateSensorConfigUseCase: UpdateSensorConfigUseCase,
+    private val startSensorSimulationUseCase: StartSensorSimulationUseCase,
+    private val stopSensorSimulationUseCase: StopSensorSimulationUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BluetoothSensorEmulatorUiState())
@@ -25,6 +29,16 @@ class BluetoothSensorEmulatorViewModel @Inject constructor(
         viewModelScope.launch {
             observeSensorConfigUseCase().collect { sensor ->
                 _uiState.update { it.copy(sensor = sensor) }
+            }
+        }
+    }
+
+    fun toggleStart() {
+        viewModelScope.launch {
+            if (_uiState.value.sensor.start) {
+                stopSensorSimulationUseCase()
+            } else {
+                startSensorSimulationUseCase()
             }
         }
     }

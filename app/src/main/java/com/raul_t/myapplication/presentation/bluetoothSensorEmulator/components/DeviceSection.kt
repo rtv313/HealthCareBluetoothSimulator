@@ -24,8 +24,10 @@ import com.raul_t.myapplication.ui.theme.MyApplicationTheme
 fun DeviceSection(
     name: String,
     status: SensorStatus,
+    isStarted: Boolean,
     onNameChange: (String) -> Unit,
-    onStatusChange: (SensorStatus) -> Unit
+    onStatusChange: (SensorStatus) -> Unit,
+    onToggleStart: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.Start
@@ -42,7 +44,10 @@ fun DeviceSection(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            BluetoothStartStopButton()
+            BluetoothStartStopButton(
+                isStarted = isStarted,
+                onToggle = onToggleStart
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -80,8 +85,10 @@ fun DeviceSectionPreview() {
         DeviceSection(
             name = "My Device",
             status = SensorStatus.Healthy,
+            isStarted = false,
             onNameChange = {},
-            onStatusChange = {}
+            onStatusChange = {},
+            onToggleStart = {}
         )
     }
 }

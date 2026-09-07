@@ -49,8 +49,10 @@ fun SensorEmitterScreen(
         DeviceSection(
             name = sensor.name,
             status = sensor.status,
+            isStarted = sensor.start,
             onNameChange = viewModel::updateName,
-            onStatusChange = viewModel::updateStatus
+            onStatusChange = viewModel::updateStatus,
+            onToggleStart = viewModel::toggleStart
         )
 
         HorizontalDivider()

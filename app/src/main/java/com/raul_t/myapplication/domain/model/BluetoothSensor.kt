@@ -5,6 +5,7 @@ enum class SensorStatus {
 }
 
 data class BluetoothSensor(
+    val start: Boolean = false,
     val name: String = "",
     val status: SensorStatus = SensorStatus.Healthy,
     val isAdvertising: Boolean = true,
