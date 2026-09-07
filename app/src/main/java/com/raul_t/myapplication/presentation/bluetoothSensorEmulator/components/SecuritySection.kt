@@ -28,10 +28,13 @@ import androidx.compose.ui.unit.dp
 import com.raul_t.myapplication.R
 
 @Composable
-fun SecuritySection() {
-    var isPinEnabled by remember { mutableStateOf(false) }
+fun SecuritySection(
+    isPinEnabled: Boolean,
+    savedPin: String,
+    onPinEnabledChange: (Boolean) -> Unit,
+    onPinChange: (String) -> Unit
+) {
     var showPinDialog by remember { mutableStateOf(false) }
-    var savedPin by remember { mutableStateOf("0000") }
 
     Column() {
         Text(
@@ -74,12 +77,7 @@ fun SecuritySection() {
 
                 Switch(
                     checked = isPinEnabled,
-                    onCheckedChange = { enabled ->
-                        isPinEnabled = enabled
-                        if (enabled) {
-                            showPinDialog = true
-                        }
-                    },
+                    onCheckedChange = onPinEnabledChange,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.outline,
                         checkedTrackColor = MaterialTheme.colorScheme.surface,
@@ -95,11 +93,9 @@ fun SecuritySection() {
         if (showPinDialog) {
             SetPinDialog(
                 initialPin = savedPin,
-                onDismiss = {
-                    showPinDialog = false
-                },
+                onDismiss = { showPinDialog = false },
                 onSave = { pin ->
-                    savedPin = pin
+                    onPinChange(pin)
                     showPinDialog = false
                 }
             )
