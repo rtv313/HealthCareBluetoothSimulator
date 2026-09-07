@@ -7,7 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -16,6 +16,10 @@ import com.raul_t.myapplication.R
 
 @Composable
 fun SecuritySection() {
+    var isPinEnabled by remember { mutableStateOf(false) }
+    var showPinDialog by remember { mutableStateOf(false) }
+    var savedPin by remember { mutableStateOf("0000") }
+
     Column() {
         Text(
             text = stringResource(R.string.security_label),
@@ -31,8 +35,13 @@ fun SecuritySection() {
         )
 
         Switch(
-            checked = false,
-            onCheckedChange = { },
+            checked = isPinEnabled,
+            onCheckedChange = { enabled ->
+                isPinEnabled = enabled
+                if (enabled) {
+                    showPinDialog = true
+                }
+            },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.outline,
                 checkedTrackColor = MaterialTheme.colorScheme.surface,
@@ -42,5 +51,19 @@ fun SecuritySection() {
                 uncheckedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f)
             )
         )
+
+        if (showPinDialog) {
+            SetPinDialog(
+                onDismiss = {
+                    showPinDialog = false
+                    // If user cancels and we don't have a pin yet, maybe disable switch?
+                    // For now just keep the switch as it was.
+                },
+                onSave = { pin ->
+                    savedPin = pin
+                    showPinDialog = false
+                }
+            )
+        }
     }
 }
