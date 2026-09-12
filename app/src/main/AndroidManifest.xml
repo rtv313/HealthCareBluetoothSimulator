@@ -31,13 +31,8 @@
         </activity>
 
         <service
-            android:name=".service.HeartRate.HeartRateForegroundService"
-            android:foregroundServiceType="dataSync"
-            android:exported="false" />
-
-        <service
-            android:name=".service.Bluetooth.BluetoothSensorForegroundService"
-            android:foregroundServiceType="connectedDevice"
+            android:name=".service.HealthcareSimulationService"
+            android:foregroundServiceType="connectedDevice|dataSync"
             android:exported="false" />
     </application>
 
