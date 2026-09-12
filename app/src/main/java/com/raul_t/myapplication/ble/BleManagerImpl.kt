@@ -34,6 +34,12 @@ class BleManagerImpl @Inject constructor(
     // BluetoothGattServer allows the app to act as a Peripheral (Server) that a Central (Client) can connect to.
     private var bluetoothGattServer: BluetoothGattServer? = null
 
+    // Reference to our simulated "Heart Rate" characteristic to update its value.
+    private var heartRateCharacteristic: BluetoothGattCharacteristic? = null
+    
+    // Tracks the currently connected device to send notifications to.
+    private var connectedDevice: BluetoothDevice? = null
+
     // Reactive state to inform the UI about what the Bluetooth radio is doing.
     private val _connectionState = MutableStateFlow<BleConnectionState>(BleConnectionState.Idle)
     override val connectionState: StateFlow<BleConnectionState> = _connectionState.asStateFlow()
@@ -69,11 +75,13 @@ class BleManagerImpl @Inject constructor(
             // Check if a new device has established a connection
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 Log.d("BleManager", "Device connected: ${device?.address}")
+                connectedDevice = device
                 _connectionState.value = BleConnectionState.Connected(device?.name ?: "Unknown Device")
             } 
             // Check if a previously connected device has disconnected
             else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.d("BleManager", "Device disconnected")
+                connectedDevice = null
                 
                 // If we were advertising when they connected, we usually want to resume
                 // advertising so other devices (or the same one) can find us again.
@@ -145,8 +153,29 @@ class BleManagerImpl @Inject constructor(
         
         bluetoothGattServer?.close()
         bluetoothGattServer = null
+        heartRateCharacteristic = null
+        connectedDevice = null
         
         _connectionState.value = BleConnectionState.Idle
+    }
+
+    /**
+     * Updates the local heart rate value and notifies any connected central devices.
+     */
+    @SuppressLint("MissingPermission")
+    override fun updateHeartRate(bpm: Int) {
+        val characteristic = heartRateCharacteristic ?: return
+        val device = connectedDevice ?: return
+
+        // According to Bluetooth SIG, the first byte is Flags (0x00 for 8-bit BPM).
+        // The second byte is the actual BPM value.
+        val data = byteArrayOf(0x00, bpm.toByte())
+        
+        // Update the internal value of the characteristic
+        characteristic.value = data
+
+        // Push the update to the connected device
+        bluetoothGattServer?.notifyCharacteristicChanged(device, characteristic, false)
     }
 
     /**
@@ -181,6 +210,9 @@ class BleManagerImpl @Inject constructor(
             )
         )
         
+        // Save a reference to the characteristic so we can update it later.
+        heartRateCharacteristic = characteristic
+
         // Add the file to the folder, and add the folder to our server.
         service.addCharacteristic(characteristic)
         bluetoothGattServer?.addService(service)

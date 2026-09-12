@@ -7,4 +7,5 @@ interface BleManager {
     fun startAdvertising(deviceName: String)
     fun stopAdvertising()
     fun isBluetoothEnabled(): Boolean
+    fun updateHeartRate(bpm: Int)
 }
