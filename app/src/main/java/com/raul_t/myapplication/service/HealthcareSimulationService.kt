@@ -89,7 +89,7 @@ class HealthcareSimulationService : Service() {
 
         // 3. BLE Advertising Management
         serviceScope.launch {
-            // Observe both the "Should be running" flag and the "Sensor Config" (for the name)
+            // Observe both the "Should be running" flag and the "Sensor Config" 
             combine(
                 bluetoothServiceManager.isServiceRunning,
                 sensorDataSource.sensorState
@@ -100,11 +100,19 @@ class HealthcareSimulationService : Service() {
                     if (!bleManager.isBluetoothEnabled()) {
                          Log.e("HealthcareService", "Bluetooth is disabled, cannot advertise")
                     } else {
-                        bleManager.startAdvertising(sensor.name.ifBlank { "Health Sensor" })
+                        // startAdvertising logic handles internal restarts if settings change
+                        bleManager.startAdvertising(sensor)
                     }
                 } else {
                     bleManager.stopAdvertising()
                 }
+            }
+        }
+
+        // 4. BLE Status Relay: Listen to status changes and push to BLE
+        serviceScope.launch {
+            sensorDataSource.sensorState.collect { sensor ->
+                bleManager.updateSensorStatus(sensor.status)
             }
         }
 
