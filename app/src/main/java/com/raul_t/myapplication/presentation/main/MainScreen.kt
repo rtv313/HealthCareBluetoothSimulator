@@ -23,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import com.raul_t.myapplication.navigation.Screen
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.SensorEmitterScreen
 import com.raul_t.myapplication.presentation.heart.HeartRateScreen
+import com.raul_t.myapplication.presentation.bluetoothClient.BluetoothClientScreen
 import com.raul_t.myapplication.ui.theme.LightSuccessGreen
 import com.raul_t.myapplication.ui.theme.SuccessGreen
 
@@ -31,7 +32,8 @@ fun MainScreen() {
     val navController = rememberNavController()
     val screens = listOf(
         Screen.HeartRate,
-        Screen.BluetoothEmitter
+        Screen.BluetoothEmitter,
+        Screen.ClientSimulator
     )
 
     Scaffold(
@@ -97,6 +99,9 @@ fun MainScreen() {
             }
             composable(Screen.BluetoothEmitter.route) {
                 SensorEmitterScreen()
+            }
+            composable(Screen.ClientSimulator.route) {
+                BluetoothClientScreen()
             }
         }
     }
