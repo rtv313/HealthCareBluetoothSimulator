@@ -11,6 +11,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.raul_t.myapplication.R
+import com.raul_t.myapplication.presentation.common.SimulationUiEvent
 import com.raul_t.myapplication.presentation.common.rememberSimulationPermissionState
 import com.raul_t.myapplication.presentation.heart.components.BpmChangeRateControls
 import com.raul_t.myapplication.presentation.heart.components.BpmDisplay
@@ -37,22 +39,21 @@ fun HeartRateScreen(
     val uiState by viewModel.uiState.collectAsState()
     val permissionState = rememberSimulationPermissionState()
 
-    HeartRateContent(
-        uiState = uiState,
-        onToggleBpm = {
-            if (uiState.isBpmStarted) {
-                viewModel.stopBpm()
-            } else {
-                // UI layer decides when to start the service based on permission state
-                if (permissionState.allGranted) {
-                    viewModel.startBpm()
-                } else {
+    LaunchedEffect(viewModel.event) {
+        viewModel.event.collect { event ->
+            when (event) {
+                is SimulationUiEvent.RequestPermissions -> {
                     permissionState.requestPermissions { granted ->
-                        if (granted) viewModel.startBpm()
+                        viewModel.onPermissionResult(granted)
                     }
                 }
             }
-        },
+        }
+    }
+
+    HeartRateContent(
+        uiState = uiState,
+        onToggleBpm = viewModel::toggleBpm,
         onSetFixBpm = viewModel::setFixBpm,
         onSetBpmVariance = viewModel::setBpmVariance,
         onSetUpdateInterval = viewModel::setUpdateInterval
