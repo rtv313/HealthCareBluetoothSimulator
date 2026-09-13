@@ -22,20 +22,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.raul_t.myapplication.R
+import com.raul_t.myapplication.domain.model.SensorStatus
 import com.raul_t.myapplication.ui.theme.LightSuccessGreen
 import com.raul_t.myapplication.ui.theme.MyApplicationTheme
 
 @Composable
-fun SensorStateDropdown() {
-
+fun SensorStateDropdown(
+    selectedStatus: SensorStatus,
+    onStatusChange: (SensorStatus) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
-    val healthyLabel = stringResource(R.string.status_healthy)
-    val damagedLabel = stringResource(R.string.status_damaged)
-    val offlineLabel = stringResource(R.string.status_offline)
-    var selectedOption by remember { mutableStateOf(healthyLabel) }
+    
+    val selectedLabel = when (selectedStatus) {
+        SensorStatus.Healthy -> stringResource(R.string.status_healthy)
+        SensorStatus.Damaged -> stringResource(R.string.status_damaged)
+        SensorStatus.Offline -> stringResource(R.string.status_offline)
+    }
 
     Column(horizontalAlignment = Alignment.Start) {
-
         Text(text = stringResource(R.string.status_label), style = MaterialTheme.typography.titleMedium)
 
         Box(
@@ -43,45 +47,41 @@ fun SensorStateDropdown() {
             contentAlignment = Alignment.CenterStart
         ) {
             Button(
-                onClick = {
-                    expanded = true
-                },
+                onClick = { expanded = true },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.outline,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 shape = RoundedCornerShape(4.dp)
             ) {
-                Text(selectedOption)
+                Text(selectedLabel)
             }
 
             DropdownMenu(
                 expanded = expanded,
-                onDismissRequest = {
-                    expanded = false
-                },
+                onDismissRequest = { expanded = false },
                 containerColor = LightSuccessGreen
             ) {
                 DropdownMenuItem(
-                    text = { Text(healthyLabel, color = Color.Black) },
+                    text = { Text(stringResource(R.string.status_healthy), color = Color.Black) },
                     onClick = {
-                        selectedOption = healthyLabel
+                        onStatusChange(SensorStatus.Healthy)
                         expanded = false
                     }
                 )
 
                 DropdownMenuItem(
-                    text = { Text(damagedLabel, color = Color.Black) },
+                    text = { Text(stringResource(R.string.status_damaged), color = Color.Black) },
                     onClick = {
-                        selectedOption = damagedLabel
+                        onStatusChange(SensorStatus.Damaged)
                         expanded = false
                     }
                 )
 
                 DropdownMenuItem(
-                    text = { Text(offlineLabel, color = Color.Black) },
+                    text = { Text(stringResource(R.string.status_offline), color = Color.Black) },
                     onClick = {
-                        selectedOption = offlineLabel
+                        onStatusChange(SensorStatus.Offline)
                         expanded = false
                     }
                 )
@@ -94,6 +94,9 @@ fun SensorStateDropdown() {
 @Composable
 fun SensorStateDropdownPreview() {
     MyApplicationTheme {
-        SensorStateDropdown()
+        SensorStateDropdown(
+            selectedStatus = SensorStatus.Healthy,
+            onStatusChange = {}
+        )
     }
 }

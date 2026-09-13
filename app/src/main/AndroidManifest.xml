@@ -7,6 +7,21 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Bluetooth permissions for Android 12+ (API 31) -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- Legacy Bluetooth permissions for API 30 -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+
+    <!-- Required for FOREGROUND_SERVICE_TYPE_DATA_SYNC -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".HealthCareApplication"
         android:allowBackup="true"
@@ -31,8 +46,8 @@
         </activity>
 
         <service
-            android:name=".service.HeartRateForegroundService"
-            android:foregroundServiceType="dataSync"
+            android:name=".service.HealthcareSimulationService"
+            android:foregroundServiceType="connectedDevice|dataSync"
             android:exported="false" />
     </application>
 

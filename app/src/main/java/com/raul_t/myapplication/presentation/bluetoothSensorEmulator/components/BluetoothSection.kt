@@ -15,7 +15,12 @@ import androidx.compose.ui.unit.dp
 import com.raul_t.myapplication.R
 
 @Composable
-fun BluetoothSection() {
+fun BluetoothSection(
+    isAdvertising: Boolean,
+    allowConnection: Boolean,
+    onAdvertisingChange: (Boolean) -> Unit,
+    onAllowConnectionChange: (Boolean) -> Unit
+) {
     Column() {
         Text(
             text = stringResource(R.string.bluetooth_label),
@@ -31,8 +36,8 @@ fun BluetoothSection() {
         )
 
         Switch(
-            checked = true,
-            onCheckedChange = { },
+            checked = isAdvertising,
+            onCheckedChange = onAdvertisingChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.outline,
                 checkedTrackColor = MaterialTheme.colorScheme.surface,
@@ -49,8 +54,8 @@ fun BluetoothSection() {
         )
 
         Switch(
-            checked = true,
-            onCheckedChange = { },
+            checked = allowConnection,
+            onCheckedChange = onAllowConnectionChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.outline,
                 checkedTrackColor = MaterialTheme.colorScheme.surface,

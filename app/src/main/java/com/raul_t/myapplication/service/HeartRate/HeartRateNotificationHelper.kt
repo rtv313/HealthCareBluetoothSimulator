@@ -1,4 +1,4 @@
-package com.raul_t.myapplication.service
+package com.raul_t.myapplication.service.HeartRate
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -19,10 +19,10 @@ class HeartRateNotificationHelper @Inject constructor(
     fun createNotificationChannel() {
         val channel = NotificationChannel(
             channelId,
-            "Heart Rate Simulator",
+            context.getString(R.string.heart_rate_notification_channel_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Background heart rate simulation service"
+            description = context.getString(R.string.heart_rate_notification_channel_description)
         }
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -31,8 +31,8 @@ class HeartRateNotificationHelper @Inject constructor(
 
     fun createNotification(): Notification {
         return NotificationCompat.Builder(context, channelId)
-            .setContentTitle("Heart Rate Simulator")
-            .setContentText("Generating heart rate data...")
+            .setContentTitle(context.getString(R.string.heart_rate_notification_title))
+            .setContentText(context.getString(R.string.heart_rate_notification_text))
             .setSmallIcon(R.drawable.ic_heart)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)

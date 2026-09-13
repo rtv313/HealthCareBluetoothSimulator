@@ -18,17 +18,22 @@ import androidx.compose.ui.unit.dp
 import com.raul_t.myapplication.R
 
 @Composable
-fun BluetoothStartStopButton() {
+fun BluetoothStartStopButton(
+    isStarted: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Button(
-        onClick = { },
+        onClick = onToggle,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (true) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+            containerColor = if (isStarted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
             contentColor = MaterialTheme.colorScheme.onPrimary
         ),
         shape = RoundedCornerShape(4.dp),
+        modifier = modifier
     ) {
         Icon(
-            imageVector = if (true) {
+            imageVector = if (isStarted) {
                 Icons.Default.Stop
             } else {
                 Icons.Default.PlayArrow
@@ -39,7 +44,7 @@ fun BluetoothStartStopButton() {
         Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
 
         Text(
-            text = if (true) stringResource(R.string.stop) else stringResource(R.string.start)
+            text = if (isStarted) stringResource(R.string.stop) else stringResource(R.string.start)
         )
     }
 }

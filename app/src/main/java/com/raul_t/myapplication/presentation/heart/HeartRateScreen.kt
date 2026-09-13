@@ -5,14 +5,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -23,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.raul_t.myapplication.R
+import com.raul_t.myapplication.presentation.common.SimulationUiEvent
+import com.raul_t.myapplication.presentation.common.rememberSimulationPermissionState
 import com.raul_t.myapplication.presentation.heart.components.BpmChangeRateControls
 import com.raul_t.myapplication.presentation.heart.components.BpmDisplay
 import com.raul_t.myapplication.presentation.heart.components.BpmStartStopButton
@@ -33,16 +34,26 @@ import com.raul_t.myapplication.ui.theme.MyApplicationTheme
 
 @Composable
 fun HeartRateScreen(
-    onRequestNotificationPermission: () -> Unit,
     viewModel: HeartRateViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val permissionState = rememberSimulationPermissionState()
+
+    LaunchedEffect(viewModel.event) {
+        viewModel.event.collect { event ->
+            when (event) {
+                is SimulationUiEvent.RequestPermissions -> {
+                    permissionState.requestPermissions { granted ->
+                        viewModel.onPermissionResult(granted)
+                    }
+                }
+            }
+        }
+    }
 
     HeartRateContent(
         uiState = uiState,
-        onRequestNotificationPermission = onRequestNotificationPermission,
-        onStartBpm = viewModel::startBpm,
-        onStopBpm = viewModel::stopBpm,
+        onToggleBpm = viewModel::toggleBpm,
         onSetFixBpm = viewModel::setFixBpm,
         onSetBpmVariance = viewModel::setBpmVariance,
         onSetUpdateInterval = viewModel::setUpdateInterval
@@ -52,9 +63,7 @@ fun HeartRateScreen(
 @Composable
 fun HeartRateContent(
     uiState: HeartRateUiState,
-    onRequestNotificationPermission: () -> Unit,
-    onStartBpm: () -> Unit,
-    onStopBpm: () -> Unit,
+    onToggleBpm: () -> Unit,
     onSetFixBpm: (Boolean, Int) -> Unit,
     onSetBpmVariance: (Int, Int) -> Unit,
     onSetUpdateInterval: (Long) -> Unit
@@ -89,14 +98,7 @@ fun HeartRateContent(
 
                 BpmStartStopButton(
                     isStarted = uiState.isBpmStarted,
-                    onToggle = {
-                        if (uiState.isBpmStarted) {
-                            onStopBpm()
-                        } else {
-                            onRequestNotificationPermission()
-                            onStartBpm()
-                        }
-                    }
+                    onToggle = onToggleBpm
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -141,9 +143,7 @@ fun HeartRateScreenPreview() {
                 bpmVarianceHigher = 10,
                 updateIntervalMs = 1000L
             ),
-            onRequestNotificationPermission = {},
-            onStartBpm = {},
-            onStopBpm = {},
+            onToggleBpm = {},
             onSetFixBpm = { _, _ -> },
             onSetBpmVariance = { _, _ -> },
             onSetUpdateInterval = {}

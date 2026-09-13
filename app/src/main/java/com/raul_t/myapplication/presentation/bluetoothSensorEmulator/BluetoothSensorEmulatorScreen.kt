@@ -10,20 +10,42 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.raul_t.myapplication.R
+import com.raul_t.myapplication.presentation.common.SimulationUiEvent
+import com.raul_t.myapplication.presentation.common.rememberSimulationPermissionState
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.components.BluetoothSection
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.components.DeviceSection
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.components.SecuritySection
 
 @Composable
-fun SensorEmitterScreen() {
-
+fun SensorEmitterScreen(
+    viewModel: BluetoothSensorEmulatorViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val sensor = uiState.sensor
     val scrollState = rememberScrollState()
+    val permissionState = rememberSimulationPermissionState()
+
+    LaunchedEffect(viewModel.event) {
+        viewModel.event.collect { event ->
+            when (event) {
+                is SimulationUiEvent.RequestPermissions -> {
+                    permissionState.requestPermissions { granted ->
+                        viewModel.onPermissionResult(granted)
+                    }
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -40,13 +62,25 @@ fun SensorEmitterScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        DeviceSection()
+        DeviceSection(
+            name = sensor.name,
+            status = sensor.status,
+            isStarted = sensor.isStarted,
+            onNameChange = viewModel::updateName,
+            onStatusChange = viewModel::updateStatus,
+            onToggleStart = viewModel::toggleStart
+        )
 
         HorizontalDivider()
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        BluetoothSection()
+        BluetoothSection(
+            isAdvertising = sensor.isAdvertising,
+            allowConnection = sensor.allowConnection,
+            onAdvertisingChange = viewModel::toggleAdvertising,
+            onAllowConnectionChange = viewModel::toggleAllowConnection
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -54,6 +88,11 @@ fun SensorEmitterScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        SecuritySection()
+        SecuritySection(
+            isPinEnabled = sensor.isPinEnabled,
+            savedPin = sensor.pin.toString().padStart(4, '0'),
+            onPinEnabledChange = viewModel::togglePinEnabled,
+            onPinChange = viewModel::updatePin
+        )
     }
 }
