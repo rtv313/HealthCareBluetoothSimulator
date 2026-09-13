@@ -44,4 +44,10 @@
     <string name="bluetooth_notification_channel_description">Background Bluetooth sensor simulation service</string>
     <string name="bluetooth_notification_title">Bluetooth Sensor Simulator</string>
     <string name="bluetooth_notification_text">Emulating Bluetooth Low Energy sensor...</string>
+
+    <!-- BLE Manager Strings -->
+    <string name="ble_error_disabled">Bluetooth is disabled</string>
+    <string name="ble_error_not_supported">BLE Advertising not supported</string>
+    <string name="ble_default_device_name">Health Sensor</string>
+    <string name="ble_unknown_device">Unknown Device</string>
 </resources>

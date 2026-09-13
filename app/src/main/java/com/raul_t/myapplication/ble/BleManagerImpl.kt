@@ -9,6 +9,7 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
+import com.raul_t.myapplication.R
 import com.raul_t.myapplication.data.datasource.FakeSensorDataSource
 import com.raul_t.myapplication.domain.model.BluetoothSensor
 import com.raul_t.myapplication.domain.model.SensorStatus
@@ -89,7 +90,7 @@ class BleManagerImpl @Inject constructor(
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 Log.d("BleManager", "Device connected: ${device?.address}")
                 connectedDevice = device
-                _connectionState.value = BleConnectionState.Connected(device?.name ?: "Unknown Device")
+                _connectionState.value = BleConnectionState.Connected(device?.name ?: context.getString(R.string.ble_unknown_device))
             } 
             // Check if a previously connected device has disconnected
             else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
@@ -155,19 +156,19 @@ class BleManagerImpl @Inject constructor(
     override fun startAdvertising(sensor: BluetoothSensor) {
         // 1. Safety check: Ensure Bluetooth is on
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
-            _connectionState.value = BleConnectionState.Error("Bluetooth is disabled")
+            _connectionState.value = BleConnectionState.Error(context.getString(R.string.ble_error_disabled))
             return
         }
 
         // 2. Get the advertiser. Some older devices might not support Peripheral mode.
         bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser
         if (bluetoothLeAdvertiser == null) {
-            _connectionState.value = BleConnectionState.Error("BLE Advertising not supported")
+            _connectionState.value = BleConnectionState.Error(context.getString(R.string.ble_error_not_supported))
             return
         }
 
         // 3. Set the name that will appear in the "Scan" list of other devices.
-        bluetoothAdapter.name = sensor.name.ifBlank { "Health Sensor" }
+        bluetoothAdapter.name = sensor.name.ifBlank { context.getString(R.string.ble_default_device_name) }
         this.isPinEnabled = sensor.isPinEnabled
 
         // 4. Open the GATT Server. This is where we host our data (Services/Characteristics).
