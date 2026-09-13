@@ -5,7 +5,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.raul_t.myapplication.R
 import com.raul_t.myapplication.presentation.bluetoothClient.DiscoveredBluetoothDevice
 import com.raul_t.myapplication.ui.theme.SuccessGreen
 
@@ -17,16 +19,16 @@ fun ConnectionDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "Connect to Device") },
-        text = { Text(text = "Do you want to connect to ${device.name} (${device.address})?") },
+        title = { Text(text = androidx.compose.ui.res.stringResource(R.string.connect_to_device_title)) },
+        text = { Text(text = androidx.compose.ui.res.stringResource(R.string.connect_dialog_message, device.name, device.address)) },
         confirmButton = {
             TextButton(onClick = onConnect) {
-                Text("Connect", color = SuccessGreen, fontWeight = FontWeight.Bold)
+                Text(androidx.compose.ui.res.stringResource(R.string.start), color = SuccessGreen, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close", color = MaterialTheme.colorScheme.error)
+                Text(androidx.compose.ui.res.stringResource(R.string.cancel), color = MaterialTheme.colorScheme.error)
             }
         }
     )

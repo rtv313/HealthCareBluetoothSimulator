@@ -16,8 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.raul_t.myapplication.R
 import com.raul_t.myapplication.domain.model.SensorStatus
 import com.raul_t.myapplication.presentation.bluetoothClient.DiscoveredBluetoothDevice
 import com.raul_t.myapplication.presentation.heart.components.BpmDisplay
@@ -48,7 +50,7 @@ fun ConnectedSensorPanel(
             ) {
                 Column {
                     Text(
-                        text = "Device Name:",
+                        text = androidx.compose.ui.res.stringResource(R.string.device_name_label),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -60,15 +62,15 @@ fun ConnectedSensorPanel(
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "Sensor Status:",
+                        text = androidx.compose.ui.res.stringResource(R.string.sensor_status_label),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = when(mockStatus) {
-                            SensorStatus.Healthy -> "Healthy"
-                            SensorStatus.Damaged -> "Damaged"
-                            SensorStatus.Offline -> "Offline"
+                            SensorStatus.Healthy -> androidx.compose.ui.res.stringResource(R.string.status_healthy)
+                            SensorStatus.Damaged -> androidx.compose.ui.res.stringResource(R.string.status_damaged)
+                            SensorStatus.Offline -> androidx.compose.ui.res.stringResource(R.string.status_offline)
                         },
                         fontWeight = FontWeight.Bold,
                         color = if (mockStatus == SensorStatus.Healthy) SuccessGreen else MaterialTheme.colorScheme.error,
@@ -88,7 +90,7 @@ fun ConnectedSensorPanel(
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "Disconnect", fontWeight = FontWeight.Bold)
+                Text(text = androidx.compose.ui.res.stringResource(R.string.disconnect_button), fontWeight = FontWeight.Bold)
             }
         }
     }

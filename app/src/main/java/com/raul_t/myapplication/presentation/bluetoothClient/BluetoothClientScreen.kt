@@ -12,10 +12,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.raul_t.myapplication.R
 import com.raul_t.myapplication.presentation.bluetoothClient.components.BluetoothDevices
 import com.raul_t.myapplication.presentation.bluetoothClient.components.ConnectedSensorPanel
 import com.raul_t.myapplication.presentation.bluetoothClient.components.ConnectionDialog
@@ -32,7 +34,7 @@ fun BluetoothClientScreen(
             .fillMaxSize()
     ) {
         Text(
-            text = "Bluetooth Client Simulator",
+            text = stringResource(R.string.bluetooth_client_simulator_title),
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold
         )
@@ -40,7 +42,7 @@ fun BluetoothClientScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Available Devices",
+            text = stringResource(R.string.available_devices_label),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
@@ -70,7 +72,7 @@ fun BluetoothClientScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Connected Sensor Data",
+                text = stringResource(R.string.connected_sensor_data_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
