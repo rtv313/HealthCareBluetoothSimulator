@@ -9,7 +9,6 @@ import com.raul_t.myapplication.ble.BleManager
 import com.raul_t.myapplication.data.datasource.FakeHeartRateDataSource
 import com.raul_t.myapplication.data.datasource.FakeSensorDataSource
 import com.raul_t.myapplication.service.Bluetooth.BluetoothNotificationHelper
-import com.raul_t.myapplication.service.HeartRate.HeartRateServiceManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,9 +32,6 @@ class HealthcareSimulationService : Service() {
 
     @Inject
     lateinit var notificationHelper: BluetoothNotificationHelper
-
-    @Inject
-    lateinit var heartRateServiceManager: HeartRateServiceManager
 
     private val serviceScope = CoroutineScope(
         SupervisorJob() + Dispatchers.IO
