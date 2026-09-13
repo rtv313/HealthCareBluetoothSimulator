@@ -9,7 +9,6 @@ import com.raul_t.myapplication.domain.usecase.StartSensorSimulationUseCase
 import com.raul_t.myapplication.domain.usecase.StopSensorSimulationUseCase
 import com.raul_t.myapplication.domain.usecase.UpdateSensorConfigUseCase
 import com.raul_t.myapplication.presentation.common.SimulationUiEvent
-import com.raul_t.myapplication.service.Bluetooth.BluetoothServiceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +24,6 @@ class BluetoothSensorEmulatorViewModel @Inject constructor(
     private val updateSensorConfigUseCase: UpdateSensorConfigUseCase,
     private val startSensorSimulationUseCase: StartSensorSimulationUseCase,
     private val stopSensorSimulationUseCase: StopSensorSimulationUseCase,
-    private val serviceManager: BluetoothServiceManager,
     private val permissionChecker: PermissionChecker
 ) : ViewModel() {
 
@@ -41,20 +39,14 @@ class BluetoothSensorEmulatorViewModel @Inject constructor(
                 _uiState.update { it.copy(sensor = sensor) }
             }
         }
-
-        viewModelScope.launch {
-            serviceManager.isServiceRunning.collect { isRunning ->
-                _uiState.update { it.copy(isServiceRunning = isRunning) }
-            }
-        }
     }
 
     fun toggleStart() {
-        if (_uiState.value.isServiceRunning) {
-            stopSensorSimulationUseCase.invoke()
+        if (_uiState.value.sensor.isStarted) {
+            stopSimulation()
         } else {
             if (permissionChecker.hasSimulationPermissions()) {
-                startSensorSimulationUseCase.invoke()
+                startSimulation()
             } else {
                 viewModelScope.launch {
                     _event.send(SimulationUiEvent.RequestPermissions)
@@ -65,7 +57,21 @@ class BluetoothSensorEmulatorViewModel @Inject constructor(
 
     fun onPermissionResult(granted: Boolean) {
         if (granted) {
-            startSensorSimulationUseCase.invoke()
+            startSimulation()
+        }
+    }
+
+    private fun startSimulation() {
+        startSensorSimulationUseCase.invoke()
+        viewModelScope.launch {
+            updateSensorConfigUseCase { it.copy(isStarted = true) }
+        }
+    }
+
+    private fun stopSimulation() {
+        stopSensorSimulationUseCase.invoke()
+        viewModelScope.launch {
+            updateSensorConfigUseCase { it.copy(isStarted = false) }
         }
     }
 

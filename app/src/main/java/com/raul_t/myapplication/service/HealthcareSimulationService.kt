@@ -9,7 +9,6 @@ import com.raul_t.myapplication.ble.BleManager
 import com.raul_t.myapplication.data.datasource.FakeHeartRateDataSource
 import com.raul_t.myapplication.data.datasource.FakeSensorDataSource
 import com.raul_t.myapplication.service.Bluetooth.BluetoothNotificationHelper
-import com.raul_t.myapplication.service.Bluetooth.BluetoothServiceManager
 import com.raul_t.myapplication.service.HeartRate.HeartRateServiceManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -17,7 +16,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -35,9 +33,6 @@ class HealthcareSimulationService : Service() {
 
     @Inject
     lateinit var notificationHelper: BluetoothNotificationHelper
-
-    @Inject
-    lateinit var bluetoothServiceManager: BluetoothServiceManager
 
     @Inject
     lateinit var heartRateServiceManager: HeartRateServiceManager
@@ -89,16 +84,10 @@ class HealthcareSimulationService : Service() {
 
         // 3. BLE Advertising Management
         serviceScope.launch {
-            // Observe both the "Should be running" flag and the "Sensor Config" 
-            combine(
-                bluetoothServiceManager.isServiceRunning,
-                sensorDataSource.sensorState
-            ) { isRunning, sensor ->
-                isRunning to sensor
-            }.collect { (isRunning, sensor) ->
-                if (isRunning) {
+            sensorDataSource.sensorState.collect { sensor ->
+                if (sensor.isStarted && sensor.isAdvertising) {
                     if (!bleManager.isBluetoothEnabled()) {
-                         Log.e("HealthcareService", "Bluetooth is disabled, cannot advertise")
+                        Log.e("HealthcareService", "Bluetooth is disabled, cannot advertise")
                     } else {
                         // startAdvertising logic handles internal restarts if settings change
                         bleManager.startAdvertising(sensor)

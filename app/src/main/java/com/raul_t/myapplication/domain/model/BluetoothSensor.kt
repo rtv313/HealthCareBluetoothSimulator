@@ -10,5 +10,6 @@ data class BluetoothSensor(
     val isAdvertising: Boolean = true,
     val allowConnection: Boolean = true,
     val isPinEnabled: Boolean = false,
-    val pin: Int = 0
+    val pin: Int = 0,
+    val isStarted: Boolean = false
 )
