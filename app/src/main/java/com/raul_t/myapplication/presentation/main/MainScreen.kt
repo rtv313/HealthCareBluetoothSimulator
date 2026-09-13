@@ -27,9 +27,7 @@ import com.raul_t.myapplication.ui.theme.LightSuccessGreen
 import com.raul_t.myapplication.ui.theme.SuccessGreen
 
 @Composable
-fun MainScreen(
-    onRequestNotificationPermission: () -> Unit
-) {
+fun MainScreen() {
     val navController = rememberNavController()
     val screens = listOf(
         Screen.HeartRate,
@@ -95,7 +93,7 @@ fun MainScreen(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.HeartRate.route) {
-                HeartRateScreen(onRequestNotificationPermission = onRequestNotificationPermission)
+                HeartRateScreen()
             }
             composable(Screen.BluetoothEmitter.route) {
                 SensorEmitterScreen()

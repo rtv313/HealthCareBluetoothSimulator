@@ -24,10 +24,44 @@ object PermissionUtils {
     }
 
     /**
-     * Placeholder for future Bluetooth permissions check.
+     * Checks if the app has required Bluetooth permissions.
+     * Required for Android 12 (API 31) and above.
      */
     fun hasBluetoothPermissions(context: Context): Boolean {
-        // To be implemented when Bluetooth functionality is added
-        return true 
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val advertise = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_ADVERTISE
+            ) == PackageManager.PERMISSION_GRANTED
+            val connect = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+            advertise && connect
+        } else {
+            true
+        }
+    }
+
+    /**
+     * Returns the list of all permissions required to run the simulation service.
+     */
+    fun getSimulationPermissions(): List<String> {
+        val permissions = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+        }
+        return permissions
+    }
+
+    /**
+     * Checks if all required simulation permissions are currently granted.
+     */
+    fun hasSimulationPermissions(context: Context): Boolean {
+        return hasNotificationPermission(context) && hasBluetoothPermissions(context)
     }
 }

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.raul_t.myapplication.R
+import com.raul_t.myapplication.presentation.common.rememberSimulationPermissionState
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.components.BluetoothSection
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.components.DeviceSection
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.components.SecuritySection
@@ -30,6 +31,7 @@ fun SensorEmitterScreen(
     val uiState by viewModel.uiState.collectAsState()
     val sensor = uiState.sensor
     val scrollState = rememberScrollState()
+    val permissionState = rememberSimulationPermissionState()
 
     Column(
         modifier = Modifier
@@ -52,7 +54,20 @@ fun SensorEmitterScreen(
             isStarted = uiState.isServiceRunning,
             onNameChange = viewModel::updateName,
             onStatusChange = viewModel::updateStatus,
-            onToggleStart = viewModel::toggleStart
+            onToggleStart = {
+                if (uiState.isServiceRunning) {
+                    viewModel.toggleStart()
+                } else {
+                    // Explicit responsibility to start service remains in the UI
+                    if (permissionState.allGranted) {
+                        viewModel.toggleStart()
+                    } else {
+                        permissionState.requestPermissions { granted ->
+                            if (granted) viewModel.toggleStart()
+                        }
+                    }
+                }
+            }
         )
 
         HorizontalDivider()
