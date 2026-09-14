@@ -29,7 +29,10 @@ fun BluetoothDevices(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(devices) { device ->
+        items(
+            items = devices,
+            key = { device -> device.address } // Uniquely identify items for Compose optimization
+        ) { device ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
