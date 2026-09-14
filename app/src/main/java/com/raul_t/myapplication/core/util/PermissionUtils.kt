@@ -37,7 +37,11 @@ object PermissionUtils {
                 context,
                 Manifest.permission.BLUETOOTH_CONNECT
             ) == PackageManager.PERMISSION_GRANTED
-            advertise && connect
+            val scan = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_SCAN
+            ) == PackageManager.PERMISSION_GRANTED
+            advertise && connect && scan
         } else {
             true
         }
@@ -54,6 +58,11 @@ object PermissionUtils {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
             permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+        } else {
+            permissions.add(Manifest.permission.BLUETOOTH)
+            permissions.add(Manifest.permission.BLUETOOTH_ADMIN)
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
         return permissions
     }
@@ -62,6 +71,36 @@ object PermissionUtils {
      * Checks if all required simulation permissions are currently granted.
      */
     fun hasSimulationPermissions(context: Context): Boolean {
-        return hasNotificationPermission(context) && hasBluetoothPermissions(context)
+        val bluetoothPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val advertise = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_ADVERTISE
+            ) == PackageManager.PERMISSION_GRANTED
+            val connect = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+            val scan = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_SCAN
+            ) == PackageManager.PERMISSION_GRANTED
+            advertise && connect && scan
+        } else {
+            val bluetooth = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH
+            ) == PackageManager.PERMISSION_GRANTED
+            val bluetoothAdmin = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_ADMIN
+            ) == PackageManager.PERMISSION_GRANTED
+            val location = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+            bluetooth && bluetoothAdmin && location
+        }
+        
+        return hasNotificationPermission(context) && bluetoothPermissions
     }
 }
