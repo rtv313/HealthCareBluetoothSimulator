@@ -34,7 +34,9 @@ class BluetoothClientViewModel @Inject constructor(
     val event: SharedFlow<SimulationUiEvent> = _event.asSharedFlow()
 
     init {
-        // Automatically listen to the data layer's found bluetooth devices
+        // Automatically listen to the data layer's found bluetooth devices.
+        // Because the data layer uses a StateFlow, this collector will trigger 
+        // every time the hardware scanner finds a new device or a signal update.
         viewModelScope.launch {
             observeDiscoveredDevicesUseCase().collect { devices ->
                 _uiState.update { it.copy(discoveredDevices = devices) }

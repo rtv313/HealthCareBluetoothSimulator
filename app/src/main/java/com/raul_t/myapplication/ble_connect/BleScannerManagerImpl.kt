@@ -27,11 +27,17 @@ class BleScannerManagerImpl @Inject constructor(
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
     private val bleScanner get() = bluetoothAdapter?.bluetoothLeScanner
 
+    // MutableStateFlow holds the real-time list of discovered devices.
+    // Because this is a Flow, any update to this list will automatically notify observers.
     private val _discoveredDevices = MutableStateFlow<List<DiscoveredBluetoothDevice>>(emptyList())
     override val discoveredDevices: StateFlow<List<DiscoveredBluetoothDevice>> = _discoveredDevices.asStateFlow()
 
     private var isScanning = false
 
+    /**
+     * The scan callback is triggered by the system whenever a BLE advertisement is detected.
+     * This happens continuously while the scanner is running, so no manual refresh is needed.
+     */
     private val scanCallback = object : ScanCallback() {
         @SuppressLint("MissingPermission")
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
@@ -41,13 +47,16 @@ class BleScannerManagerImpl @Inject constructor(
             val deviceAddress = device.address
             val rssi = result.rssi
 
+            // Updating the StateFlow triggers an automatic UI refresh.
             _discoveredDevices.update { currentList ->
                 val alreadyExists = currentList.any { it.address == deviceAddress }
                 if (alreadyExists) {
+                    // Update existing device (e.g., signal strength changes)
                     currentList.map {
                         if (it.address == deviceAddress) it.copy(name = deviceName, rssi = rssi) else it
                     }
                 } else {
+                    // Add new device to the list
                     currentList + DiscoveredBluetoothDevice(deviceName, deviceAddress, rssi)
                 }
             }

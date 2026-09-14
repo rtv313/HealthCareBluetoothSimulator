@@ -29,6 +29,9 @@ import com.raul_t.myapplication.presentation.common.rememberSimulationPermission
 fun BluetoothClientScreen(
     viewModel: BluetoothClientViewModel = hiltViewModel()
 ) {
+    // collectAsState() converts the ViewModel's StateFlow into a Compose State.
+    // This causes the entire screen to automatically re-compose (refresh) 
+    // whenever the discovered devices list changes in the hardware layer.
     val uiState by viewModel.uiState.collectAsState()
     val permissionState = rememberSimulationPermissionState()
 
