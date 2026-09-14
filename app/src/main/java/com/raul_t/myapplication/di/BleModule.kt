@@ -2,6 +2,8 @@ package com.raul_t.myapplication.di
 
 import com.raul_t.myapplication.ble.BleManager
 import com.raul_t.myapplication.ble.BleManagerImpl
+import com.raul_t.myapplication.ble_connect.BleClientManager
+import com.raul_t.myapplication.ble_connect.BleClientManagerImpl
 import com.raul_t.myapplication.ble_connect.BleScannerManager
 import com.raul_t.myapplication.ble_connect.BleScannerManagerImpl
 import com.raul_t.myapplication.data.repository.BleConnectionRepositoryImpl
@@ -23,6 +25,10 @@ abstract class BleModule {
     @Binds
     @Singleton
     abstract fun bindBleScannerManager(bleScannerManagerImpl: BleScannerManagerImpl): BleScannerManager
+
+    @Binds
+    @Singleton
+    abstract fun bindBleClientManager(bleClientManagerImpl: BleClientManagerImpl): BleClientManager
 
     @Binds
     @Singleton

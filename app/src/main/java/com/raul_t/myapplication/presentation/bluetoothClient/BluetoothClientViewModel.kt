@@ -4,18 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raul_t.myapplication.core.util.PermissionChecker
 import com.raul_t.myapplication.domain.model.DiscoveredBluetoothDevice
-import com.raul_t.myapplication.domain.usecase.ObserveDiscoveredDevicesUseCase
-import com.raul_t.myapplication.domain.usecase.StartDeviceScanUseCase
-import com.raul_t.myapplication.domain.usecase.StopDeviceScanUseCase
+import com.raul_t.myapplication.domain.usecase.*
 import com.raul_t.myapplication.presentation.common.SimulationUiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,6 +16,11 @@ class BluetoothClientViewModel @Inject constructor(
     private val observeDiscoveredDevicesUseCase: ObserveDiscoveredDevicesUseCase,
     private val startDeviceScanUseCase: StartDeviceScanUseCase,
     private val stopDeviceScanUseCase: StopDeviceScanUseCase,
+    private val connectToDeviceUseCase: ConnectToDeviceUseCase,
+    private val disconnectFromDeviceUseCase: DisconnectFromDeviceUseCase,
+    private val observeClientConnectionStateUseCase: ObserveClientConnectionStateUseCase,
+    private val observeReceivedHeartRateUseCase: ObserveReceivedHeartRateUseCase,
+    private val observeReceivedSensorStatusUseCase: ObserveReceivedSensorStatusUseCase,
     private val permissionChecker: PermissionChecker
 ) : ViewModel() {
 
@@ -35,11 +32,30 @@ class BluetoothClientViewModel @Inject constructor(
 
     init {
         // Automatically listen to the data layer's found bluetooth devices.
-        // Because the data layer uses a StateFlow, this collector will trigger 
-        // every time the hardware scanner finds a new device or a signal update.
         viewModelScope.launch {
             observeDiscoveredDevicesUseCase().collect { devices ->
                 _uiState.update { it.copy(discoveredDevices = devices) }
+            }
+        }
+
+        // Observe GATT connection state
+        viewModelScope.launch {
+            observeClientConnectionStateUseCase().collect { state ->
+                _uiState.update { it.copy(connectionState = state) }
+            }
+        }
+
+        // Observe real-time Heart Rate from connected sensor
+        viewModelScope.launch {
+            observeReceivedHeartRateUseCase().collect { bpm ->
+                _uiState.update { it.copy(mockBpm = bpm) }
+            }
+        }
+
+        // Observe real-time Sensor Status from connected sensor
+        viewModelScope.launch {
+            observeReceivedSensorStatusUseCase().collect { status ->
+                _uiState.update { it.copy(mockStatus = status) }
             }
         }
         
@@ -80,6 +96,7 @@ class BluetoothClientViewModel @Inject constructor(
     }
 
     fun connectDevice(device: DiscoveredBluetoothDevice) {
+        connectToDeviceUseCase(device.address)
         _uiState.update { 
             it.copy(
                 connectedDevice = device,
@@ -89,6 +106,7 @@ class BluetoothClientViewModel @Inject constructor(
     }
 
     fun disconnect() {
+        disconnectFromDeviceUseCase()
         _uiState.update { it.copy(connectedDevice = null) }
     }
 
