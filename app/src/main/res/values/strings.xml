@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">Heart Rate Ble Simulator</string>
     <string name="heart_rate_monitor_title">Heart Rate Monitor</string>
     <string name="bpm_unit"> BPM</string>
     <string name="start">Start</string>
