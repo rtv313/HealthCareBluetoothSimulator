@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.raul_t.myapplication.R
 import com.raul_t.myapplication.domain.model.SensorStatus
-import com.raul_t.myapplication.presentation.bluetoothClient.DiscoveredBluetoothDevice
+import com.raul_t.myapplication.domain.model.DiscoveredBluetoothDevice
 import com.raul_t.myapplication.presentation.heart.components.BpmDisplay
 import com.raul_t.myapplication.ui.theme.LightSuccessGreen
 import com.raul_t.myapplication.ui.theme.SuccessGreen

@@ -7,7 +7,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
 import com.raul_t.myapplication.R
-import com.raul_t.myapplication.presentation.bluetoothClient.DiscoveredBluetoothDevice
+import com.raul_t.myapplication.domain.model.DiscoveredBluetoothDevice
 import com.raul_t.myapplication.ui.theme.SuccessGreen
 
 @Composable

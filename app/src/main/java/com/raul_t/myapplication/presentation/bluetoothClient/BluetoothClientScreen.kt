@@ -9,6 +9,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -21,12 +22,27 @@ import com.raul_t.myapplication.R
 import com.raul_t.myapplication.presentation.bluetoothClient.components.BluetoothDevices
 import com.raul_t.myapplication.presentation.bluetoothClient.components.ConnectedSensorPanel
 import com.raul_t.myapplication.presentation.bluetoothClient.components.ConnectionDialog
+import com.raul_t.myapplication.presentation.common.SimulationUiEvent
+import com.raul_t.myapplication.presentation.common.rememberSimulationPermissionState
 
 @Composable
 fun BluetoothClientScreen(
     viewModel: BluetoothClientViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val permissionState = rememberSimulationPermissionState()
+
+    LaunchedEffect(viewModel.event) {
+        viewModel.event.collect { event ->
+            when (event) {
+                is SimulationUiEvent.RequestPermissions -> {
+                    permissionState.requestPermissions { granted ->
+                        viewModel.onPermissionResult(granted)
+                    }
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier

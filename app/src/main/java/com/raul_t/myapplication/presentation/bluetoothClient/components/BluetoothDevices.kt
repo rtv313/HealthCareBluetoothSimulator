@@ -17,7 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.raul_t.myapplication.presentation.bluetoothClient.DiscoveredBluetoothDevice
+import com.raul_t.myapplication.domain.model.DiscoveredBluetoothDevice
 
 @Composable
 fun BluetoothDevices(
