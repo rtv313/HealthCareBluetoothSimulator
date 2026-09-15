@@ -24,8 +24,6 @@ import com.raul_t.myapplication.navigation.Screen
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.SensorEmitterScreen
 import com.raul_t.myapplication.presentation.heart.HeartRateScreen
 import com.raul_t.myapplication.presentation.bluetoothClient.BluetoothClientScreen
-import com.raul_t.myapplication.ui.theme.LightSuccessGreen
-import com.raul_t.myapplication.ui.theme.SuccessGreen
 
 @Composable
 fun MainScreen() {
@@ -39,9 +37,7 @@ fun MainScreen() {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(
-                containerColor = LightSuccessGreen
-            ) {
+            NavigationBar {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
 
@@ -63,9 +59,9 @@ fun MainScreen() {
                         },
                         selected = selected,
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = SuccessGreen,
-                            selectedTextColor = SuccessGreen,
-                            indicatorColor = LightSuccessGreen.copy(alpha = 0.4f),
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         ),

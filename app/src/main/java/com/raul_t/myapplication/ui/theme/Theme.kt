@@ -13,9 +13,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
+    primary = SuccessGreen,
     secondary = PurpleGrey80,
     tertiary = Pink80,
+    primaryContainer = SuccessGreen.copy(alpha = 0.4f),
     surfaceVariant = DarkGrey,
     outline = SuccessGreen,
     error = HeartRed,
@@ -25,9 +26,10 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
+    primary = SuccessGreen,
     secondary = PurpleGrey40,
     tertiary = Pink40,
+    primaryContainer = SuccessGreen.copy(alpha = 0.4f),
     surfaceVariant = LightGrey,
     outline = SuccessGreen,
     error = HeartRed,
