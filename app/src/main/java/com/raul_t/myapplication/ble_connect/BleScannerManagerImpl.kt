@@ -83,13 +83,20 @@ class BleScannerManagerImpl @Inject constructor(
         _discoveredDevices.value = emptyList()
         isScanning = true
 
+        // Filter to only look for our specific sensor name.
+        val filters = listOf(
+            ScanFilter.Builder()
+                .setDeviceName(context.getString(R.string.ble_default_device_name))
+                .build()
+        )
+
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
 
         try {
-            // Scanning with null filters to see if any devices show up.
-            bleScanner?.startScan(null, settings, scanCallback)
+            // Applying the filter to only show "Health Sensor" devices.
+            bleScanner?.startScan(filters, settings, scanCallback)
         } catch (e: Exception) {
             Log.e("BleScannerManager", "Error starting scan", e)
             isScanning = false
