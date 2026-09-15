@@ -37,44 +37,29 @@ class HealthcareSimulationService : Service() {
         SupervisorJob() + Dispatchers.IO
     )
 
+    private var simulationJob: kotlinx.coroutines.Job? = null
+
     override fun onCreate() {
         super.onCreate()
-        Log.d("HealthcareService", "onCreate")
+        Log.d("HealthcareService", "onCreate - Initializing data relays")
         notificationHelper.createNotificationChannel()
-    }
 
-    override fun onBind(intent: Intent?): IBinder? = null
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("HealthcareService", "onStartCommand")
-
-        // Start as foreground with combined types
-        startForeground(
-            303,
-            notificationHelper.createNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-        )
-
-        // 1. Heart Rate Simulation Loop
+        // 1. BLE Data Relay: Listen to BPM changes and push to BLE
+        // We do this in onCreate to ensure it only happens once for the life of the service.
         serviceScope.launch {
-            heartRateDataSource.config.collect { config ->
-                if (config.isBpmStarted) {
-                    launch {
-                        while (heartRateDataSource.config.value.isBpmStarted) {
-                            heartRateDataSource.createNewHeartRate()
-                            delay(heartRateDataSource.config.value.updateIntervalMs)
-                        }
-                    }
+            heartRateDataSource.currentBpm.collect { bpm ->
+                if (bpm > 0) {
+                    Log.v("HealthcareService", "Relaying BPM to BLE: $bpm")
+                    bleManager.updateHeartRate(bpm)
                 }
             }
         }
 
-        // 2. BLE Data Relay: Listen to BPM changes and push to BLE
+        // 2. BLE Status Relay: Listen to status changes and push to BLE
         serviceScope.launch {
-            heartRateDataSource.currentBpm.collect { bpm ->
-                if (bpm > 0) {
-                    bleManager.updateHeartRate(bpm)
-                }
+            sensorDataSource.sensorState.collect { sensor ->
+                Log.d("HealthcareService", "Relaying Status to BLE: ${sensor.status}")
+                bleManager.updateSensorStatus(sensor.status)
             }
         }
 
@@ -85,7 +70,6 @@ class HealthcareSimulationService : Service() {
                     if (!bleManager.isBluetoothEnabled()) {
                         Log.e("HealthcareService", "Bluetooth is disabled, cannot advertise")
                     } else {
-                        // startAdvertising logic handles internal restarts if settings change
                         bleManager.startAdvertising(sensor)
                     }
                 } else {
@@ -93,11 +77,33 @@ class HealthcareSimulationService : Service() {
                 }
             }
         }
+    }
 
-        // 4. BLE Status Relay: Listen to status changes and push to BLE
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d("HealthcareService", "onStartCommand")
+
+        startForeground(
+            303,
+            notificationHelper.createNotification(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        )
+
+        // Heart Rate Simulation Loop Management
         serviceScope.launch {
-            sensorDataSource.sensorState.collect { sensor ->
-                bleManager.updateSensorStatus(sensor.status)
+            heartRateDataSource.config.collect { config ->
+                simulationJob?.cancel()
+                
+                if (config.isBpmStarted) {
+                    simulationJob = launch {
+                        Log.i("HealthcareService", "Starting loop (Interval: ${config.updateIntervalMs}ms)")
+                        while (true) {
+                            heartRateDataSource.createNewHeartRate()
+                            delay(config.updateIntervalMs)
+                        }
+                    }
+                }
             }
         }
 

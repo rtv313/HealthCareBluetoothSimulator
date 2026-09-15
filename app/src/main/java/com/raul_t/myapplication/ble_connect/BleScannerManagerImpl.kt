@@ -49,6 +49,8 @@ class BleScannerManagerImpl @Inject constructor(
             val deviceAddress = device.address
             val rssi = result.rssi
 
+            Log.d("BleScannerManager", "Discovered: ${device.name ?: "Unnamed"} [$deviceAddress] RSSI: $rssi")
+
             // Updating the StateFlow triggers an automatic UI refresh.
             _discoveredDevices.update { currentList ->
                 val newDevice = DiscoveredBluetoothDevice(deviceName, deviceAddress, rssi)
@@ -81,19 +83,13 @@ class BleScannerManagerImpl @Inject constructor(
         _discoveredDevices.value = emptyList()
         isScanning = true
 
-        // Android 16+ restricted unfiltered scans. We add a filter for our Heart Rate service.
-        val filters = listOf(
-            ScanFilter.Builder()
-                .setServiceUuid(ParcelUuid(GattServiceConstants.HEART_RATE_SERVICE_UUID))
-                .build()
-        )
-
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
 
         try {
-            bleScanner?.startScan(filters, settings, scanCallback)
+            // Scanning with null filters to see if any devices show up.
+            bleScanner?.startScan(null, settings, scanCallback)
         } catch (e: Exception) {
             Log.e("BleScannerManager", "Error starting scan", e)
             isScanning = false

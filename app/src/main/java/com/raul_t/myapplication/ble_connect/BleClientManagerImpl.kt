@@ -3,6 +3,7 @@ package com.raul_t.myapplication.ble_connect
 import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import com.raul_t.myapplication.ble.GattServiceConstants
 import com.raul_t.myapplication.domain.model.SensorStatus
@@ -10,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -22,8 +24,6 @@ import javax.inject.Singleton
 
 /**
  * Implementation of [BleClientManager] that handles the GATT client lifecycle.
- * This class is responsible for connecting to remote BLE devices, discovering their services,
- * and subscribing to characteristic notifications.
  */
 @Singleton
 class BleClientManagerImpl @Inject constructor(
@@ -32,155 +32,203 @@ class BleClientManagerImpl @Inject constructor(
 
     private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
-    
-    // The BluetoothGatt object represents the active connection to a remote device.
     private var bluetoothGatt: BluetoothGatt? = null
 
-    // StateFlow to track the current connection lifecycle (Disconnected -> Connecting -> Connected).
     private val _connectionState = MutableStateFlow<BleClientConnectionState>(BleClientConnectionState.Disconnected)
     override val connectionState: StateFlow<BleClientConnectionState> = _connectionState.asStateFlow()
 
-    // SharedFlow to emit received Heart Rate values in real-time.
-    private val _heartRate = MutableSharedFlow<Int>()
+    private val _heartRate = MutableSharedFlow<Int>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val heartRate: SharedFlow<Int> = _heartRate.asSharedFlow()
 
-    // SharedFlow to emit received Sensor Status updates.
-    private val _sensorStatus = MutableSharedFlow<SensorStatus>()
+    private val _sensorStatus = MutableSharedFlow<SensorStatus>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val sensorStatus: SharedFlow<SensorStatus> = _sensorStatus.asSharedFlow()
 
-    // Using Dispatchers.IO for background data processing and flow emission.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var hasRetriedConfig = false
 
-    /**
-     * Core callback for all GATT client events.
-     * All methods here are invoked by the Android Bluetooth system on a background binder thread.
-     */
     private val gattCallback = object : BluetoothGattCallback() {
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
-            // status != GATT_SUCCESS usually means a timeout, out of range, or hardware error.
+            Log.d("BleClientManager", "onConnectionStateChange: status=$status newState=$newState")
             if (status != BluetoothGatt.GATT_SUCCESS) {
+                hasRetriedConfig = false
                 _connectionState.value = BleClientConnectionState.Error("Connection failed with status: $status")
                 disconnect()
                 return
             }
 
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                // Once connected, we MUST discover services before we can read/write data.
+                hasRetriedConfig = false
                 _connectionState.value = BleClientConnectionState.Connected
-                Log.d("BleClientManager", "Connected to GATT server, discovering services...")
+                Log.i("BleClientManager", "CONNECTED to GATT. Discovering services...")
                 gatt?.discoverServices()
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                hasRetriedConfig = false
                 _connectionState.value = BleClientConnectionState.Disconnected
-                Log.d("BleClientManager", "Disconnected from GATT server")
+                Log.i("BleClientManager", "DISCONNECTED from GATT")
             }
         }
 
         @SuppressLint("MissingPermission")
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BleClientManager", "Services discovered")
-                // Services are ready, now we can enable notifications for the data we want.
-                enableNotifications(gatt)
+                Log.i("BleClientManager", "Services DISCOVERED. Waiting for hardware to settle...")
+                scope.launch {
+                    kotlinx.coroutines.delay(300)
+                    enableHeartRateNotifications(gatt)
+                }
             } else {
-                Log.e("BleClientManager", "Service discovery failed with status: $status")
+                Log.e("BleClientManager", "Service discovery FAILED: status $status")
             }
         }
 
-        /**
-         * Triggered whenever a characteristic we are "subscribed" to sends a new value (Notify).
-         */
-        override fun onCharacteristicChanged(
-            gatt: BluetoothGatt?,
-            characteristic: BluetoothGattCharacteristic?
-        ) {
-            when (characteristic?.uuid) {
-                GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID -> {
-                    val value = characteristic.value
-                    if (value != null && value.size >= 2) {
-                        // Per BLE spec: byte 0 is flags, byte 1 is BPM (if 8-bit value format)
-                        val bpm = value[1].toInt() and 0xFF
-                        scope.launch { _heartRate.emit(bpm) }
+        @SuppressLint("MissingPermission")
+        override fun onDescriptorWrite(gatt: BluetoothGatt?, descriptor: BluetoothGattDescriptor?, status: Int) {
+            val charUuid = descriptor?.characteristic?.uuid
+            Log.d("BleClientManager", "onDescriptorWrite: desc=${descriptor?.uuid} char=$charUuid status=$status")
+
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                if (descriptor?.uuid == GattServiceConstants.CCCD_UUID) {
+                    if (charUuid == GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID) {
+                        Log.i("BleClientManager", "HR notifications ENABLED. Now enabling Status...")
+                        enableStatusNotifications(gatt)
+                    } else if (charUuid == GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID) {
+                        Log.i("BleClientManager", "Status notifications ENABLED. Setup complete.")
                     }
                 }
-                GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID -> {
-                    val statusStr = characteristic.value?.toString(Charsets.UTF_8)
-                    val status = try {
-                        SensorStatus.valueOf(statusStr ?: "Healthy")
-                    } catch (e: Exception) {
-                        SensorStatus.Healthy
-                    }
-                    scope.launch { _sensorStatus.emit(status) }
+            } else if (status == 133 && !hasRetriedConfig) {
+                Log.w("BleClientManager", "Descriptor write 133 ERROR. Retrying HR config in 500ms...")
+                hasRetriedConfig = true
+                scope.launch {
+                    kotlinx.coroutines.delay(500)
+                    enableHeartRateNotifications(gatt)
                 }
+            } else {
+                Log.e("BleClientManager", "Descriptor write FAILED: status $status")
+            }
+        }
+
+        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
+            Log.v("BleClientManager", "onCharacteristicChanged (Modern API): char=${characteristic.uuid} value=${value.contentToString()}")
+            processCharacteristicUpdate(characteristic, value)
+        }
+
+        @Suppress("DEPRECATION")
+        override fun onCharacteristicChanged(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?) {
+            if (characteristic != null) {
+                Log.v("BleClientManager", "onCharacteristicChanged (Legacy API): char=${characteristic.uuid}")
+                processCharacteristicUpdate(characteristic, characteristic.value)
             }
         }
     }
 
-    /**
-     * Initiates a connection to a remote BLE device using its MAC address.
-     */
+    private fun processCharacteristicUpdate(characteristic: BluetoothGattCharacteristic, value: ByteArray?) {
+        if (value == null) {
+            Log.w("BleClientManager", "Received NULL value for char ${characteristic.uuid}")
+            return
+        }
+
+        when (characteristic.uuid) {
+            GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID -> {
+                if (value.size >= 2) {
+                    val bpm = value[1].toInt() and 0xFF
+                    Log.d("BleClientManager", "RECEIVED BPM: $bpm")
+                    scope.launch { _heartRate.emit(bpm) }
+                } else {
+                    Log.w("BleClientManager", "HR packet too small: ${value.size} bytes")
+                }
+            }
+            GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID -> {
+                val statusStr = String(value, Charsets.UTF_8)
+                Log.d("BleClientManager", "RECEIVED Status: $statusStr")
+                val status = try {
+                    SensorStatus.valueOf(statusStr)
+                } catch (e: Exception) {
+                    Log.e("BleClientManager", "Failed to parse sensor status: $statusStr")
+                    SensorStatus.Healthy
+                }
+                scope.launch { _sensorStatus.emit(status) }
+            }
+        }
+    }
+
     @SuppressLint("MissingPermission")
     override fun connect(address: String) {
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
             _connectionState.value = BleClientConnectionState.Error("Bluetooth is disabled")
             return
         }
-
         val device = bluetoothAdapter.getRemoteDevice(address)
         if (device == null) {
             _connectionState.value = BleClientConnectionState.Error("Device not found")
             return
         }
-
         _connectionState.value = BleClientConnectionState.Connecting
-        // autoConnect = false means connect immediately (better for initial manual connections).
+        Log.i("BleClientManager", "Initiating connection to $address")
         bluetoothGatt = device.connectGatt(context, false, gattCallback)
     }
 
-    /**
-     * Disconnects the current GATT session and releases hardware resources.
-     */
     @SuppressLint("MissingPermission")
     override fun disconnect() {
+        Log.i("BleClientManager", "Disconnecting GATT")
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         bluetoothGatt = null
         _connectionState.value = BleClientConnectionState.Disconnected
     }
 
-    /**
-     * Configures the remote device to start pushing data updates automatically (Notifications).
-     * This involves two steps:
-     * 1. Telling the local Android OS to listen for updates.
-     * 2. Writing to the remote device's CCCD descriptor to turn on the "Notification" switch.
-     */
     @SuppressLint("MissingPermission")
-    private fun enableNotifications(gatt: BluetoothGatt?) {
-        // --- Enable Heart Rate Notifications ---
-        val hrService = gatt?.getService(GattServiceConstants.HEART_RATE_SERVICE_UUID)
-        val hrChar = hrService?.getCharacteristic(GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID)
-        
-        if (hrChar != null) {
-            // Step 1: Tell Android OS to listen
-            gatt.setCharacteristicNotification(hrChar, true)
+    private fun enableHeartRateNotifications(gatt: BluetoothGatt?) {
+        val service = gatt?.getService(GattServiceConstants.HEART_RATE_SERVICE_UUID)
+        val char = service?.getCharacteristic(GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID)
+        if (char != null) {
+            val success = gatt.setCharacteristicNotification(char, true)
+            Log.d("BleClientManager", "setCharacteristicNotification (HR) result: $success")
             
-            // Step 2: Tell the Remote Device to send (via the CCCD descriptor)
-            val descriptor = hrChar.getDescriptor(GattServiceConstants.CCCD_UUID)
-            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-            gatt.writeDescriptor(descriptor)
-            Log.d("BleClientManager", "Enabled HR notifications")
+            val desc = char.getDescriptor(GattServiceConstants.CCCD_UUID)
+            if (desc != null) {
+                Log.d("BleClientManager", "Requesting HR notification write to CCCD")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    gatt.writeDescriptor(desc, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    desc.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    @Suppress("DEPRECATION")
+                    gatt.writeDescriptor(desc)
+                }
+            } else {
+                Log.e("BleClientManager", "HR CCCD descriptor not found!")
+            }
+        } else {
+            Log.e("BleClientManager", "HR characteristic not found!")
+            enableStatusNotifications(gatt)
         }
+    }
 
-        // --- Enable Sensor Status Notifications ---
-        val sensorService = gatt?.getService(GattServiceConstants.SIMULATOR_SERVICE_UUID)
-        val statusChar = sensorService?.getCharacteristic(GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID)
-        
-        if (statusChar != null) {
-            gatt.setCharacteristicNotification(statusChar, true)
-            val descriptor = statusChar.getDescriptor(GattServiceConstants.CCCD_UUID)
-            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-            gatt.writeDescriptor(descriptor)
-            Log.d("BleClientManager", "Enabled Status notifications")
+    @SuppressLint("MissingPermission")
+    private fun enableStatusNotifications(gatt: BluetoothGatt?) {
+        val service = gatt?.getService(GattServiceConstants.SIMULATOR_SERVICE_UUID)
+        val char = service?.getCharacteristic(GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID)
+        if (char != null) {
+            val success = gatt.setCharacteristicNotification(char, true)
+            Log.d("BleClientManager", "setCharacteristicNotification (Status) result: $success")
+            
+            val desc = char.getDescriptor(GattServiceConstants.CCCD_UUID)
+            if (desc != null) {
+                Log.d("BleClientManager", "Requesting Status notification write to CCCD")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    gatt.writeDescriptor(desc, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    desc.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    @Suppress("DEPRECATION")
+                    gatt.writeDescriptor(desc)
+                }
+            } else {
+                Log.e("BleClientManager", "Status CCCD descriptor not found!")
+            }
+        } else {
+            Log.e("BleClientManager", "Status characteristic not found!")
         }
     }
 }
