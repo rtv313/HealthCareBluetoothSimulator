@@ -14,6 +14,10 @@
         android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
 
+    <!-- Android 16+ (API 36) Discovery and Health Permissions -->
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+    <uses-permission android:name="android.permission.READ_HEART_RATE" />
+
     <!-- Legacy Bluetooth permissions for API 30 -->
     <uses-permission
         android:name="android.permission.BLUETOOTH"

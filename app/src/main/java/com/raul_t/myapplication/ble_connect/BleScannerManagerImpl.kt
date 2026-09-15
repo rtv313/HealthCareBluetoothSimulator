@@ -4,11 +4,14 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.os.ParcelUuid
 import android.util.Log
 import com.raul_t.myapplication.R
+import com.raul_t.myapplication.ble.GattServiceConstants
 import com.raul_t.myapplication.domain.model.DiscoveredBluetoothDevice
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,12 +81,19 @@ class BleScannerManagerImpl @Inject constructor(
         _discoveredDevices.value = emptyList()
         isScanning = true
 
+        // Android 16+ restricted unfiltered scans. We add a filter for our Heart Rate service.
+        val filters = listOf(
+            ScanFilter.Builder()
+                .setServiceUuid(ParcelUuid(GattServiceConstants.HEART_RATE_SERVICE_UUID))
+                .build()
+        )
+
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
 
         try {
-            bleScanner?.startScan(null, settings, scanCallback)
+            bleScanner?.startScan(filters, settings, scanCallback)
         } catch (e: Exception) {
             Log.e("BleScannerManager", "Error starting scan", e)
             isScanning = false

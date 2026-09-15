@@ -55,6 +55,13 @@ object PermissionUtils {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
+        
+        // Android 16+ specific permissions
+        if (Build.VERSION.SDK_INT >= 36) { // Android 16 (API 36)
+            permissions.add("android.permission.NEARBY_WIFI_DEVICES")
+            permissions.add("android.permission.READ_HEART_RATE")
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
             permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
@@ -71,6 +78,19 @@ object PermissionUtils {
      * Checks if all required simulation permissions are currently granted.
      */
     fun hasSimulationPermissions(context: Context): Boolean {
+        // Android 16+ check
+        if (Build.VERSION.SDK_INT >= 36) {
+            val nearbyWifi = ContextCompat.checkSelfPermission(
+                context,
+                "android.permission.NEARBY_WIFI_DEVICES"
+            ) == PackageManager.PERMISSION_GRANTED
+            val readHeartRate = ContextCompat.checkSelfPermission(
+                context,
+                "android.permission.READ_HEART_RATE"
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!nearbyWifi || !readHeartRate) return false
+        }
+
         val bluetoothPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val advertise = ContextCompat.checkSelfPermission(
                 context,
