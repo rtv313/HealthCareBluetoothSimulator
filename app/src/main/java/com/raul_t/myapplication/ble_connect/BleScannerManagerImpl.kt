@@ -8,18 +8,18 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
-import android.os.ParcelUuid
 import android.util.Log
 import com.raul_t.myapplication.R
-import com.raul_t.myapplication.ble.GattServiceConstants
 import com.raul_t.myapplication.domain.model.DiscoveredBluetoothDevice
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.seconds
 
 @Singleton
 class BleScannerManagerImpl @Inject constructor(
@@ -35,10 +35,11 @@ class BleScannerManagerImpl @Inject constructor(
     override val discoveredDevices: StateFlow<List<DiscoveredBluetoothDevice>> = _discoveredDevices.asStateFlow()
 
     private var isScanning = false
+    private val scannerScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var cleanupJob: Job? = null
 
     /**
      * The scan callback is triggered by the system whenever a BLE advertisement is detected.
-     * This happens continuously while the scanner is running, so no manual refresh is needed.
      */
     private val scanCallback = object : ScanCallback() {
         @SuppressLint("MissingPermission")
@@ -53,7 +54,12 @@ class BleScannerManagerImpl @Inject constructor(
 
             // Updating the StateFlow triggers an automatic UI refresh.
             _discoveredDevices.update { currentList ->
-                val newDevice = DiscoveredBluetoothDevice(deviceName, deviceAddress, rssi)
+                val newDevice = DiscoveredBluetoothDevice(
+                    name = deviceName, 
+                    address = deviceAddress, 
+                    rssi = rssi,
+                    lastSeen = System.currentTimeMillis()
+                )
                 // We filter out any previous instance of this device (same MAC address)
                 // and add the new one, then sort by signal strength (RSSI).
                 (currentList.filterNot { it.address == deviceAddress } + newDevice)
@@ -83,6 +89,9 @@ class BleScannerManagerImpl @Inject constructor(
         _discoveredDevices.value = emptyList()
         isScanning = true
 
+        // Start the automated cleanup loop to remove devices that haven't been seen recently.
+        startCleanupLoop()
+
         // Filter to only look for our specific sensor name.
         val filters = listOf(
             ScanFilter.Builder()
@@ -100,6 +109,7 @@ class BleScannerManagerImpl @Inject constructor(
         } catch (e: Exception) {
             Log.e("BleScannerManager", "Error starting scan", e)
             isScanning = false
+            stopCleanupLoop()
         }
     }
 
@@ -110,5 +120,28 @@ class BleScannerManagerImpl @Inject constructor(
         isScanning = false
         Log.d("BleScannerManager", "Stopping BLE Scan...")
         bleScanner?.stopScan(scanCallback)
+        stopCleanupLoop()
+    }
+
+    /**
+     * Periodically checks the discovered devices list and removes entries 
+     * that haven't broadcasted in more than 10 seconds.
+     */
+    private fun startCleanupLoop() {
+        cleanupJob?.cancel()
+        cleanupJob = scannerScope.launch {
+            while (isActive) {
+                delay(5.seconds) // Check every 5 seconds
+                val now = System.currentTimeMillis()
+                _discoveredDevices.update { currentList ->
+                    currentList.filter { (now - it.lastSeen) < 10000 } // Keep if seen in last 10s
+                }
+            }
+        }
+    }
+
+    private fun stopCleanupLoop() {
+        cleanupJob?.cancel()
+        cleanupJob = null
     }
 }
