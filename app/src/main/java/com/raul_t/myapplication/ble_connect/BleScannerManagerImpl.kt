@@ -4,11 +4,14 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.os.ParcelUuid
 import android.util.Log
 import com.raul_t.myapplication.R
+import com.raul_t.myapplication.ble.GattServiceConstants
 import com.raul_t.myapplication.domain.model.DiscoveredBluetoothDevice
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +31,6 @@ class BleScannerManagerImpl @Inject constructor(
     private val bleScanner get() = bluetoothAdapter?.bluetoothLeScanner
 
     // MutableStateFlow holds the real-time list of discovered devices.
-    // Because this is a Flow, any update to this list will automatically notify observers.
     private val _discoveredDevices = MutableStateFlow<List<DiscoveredBluetoothDevice>>(emptyList())
     override val discoveredDevices: StateFlow<List<DiscoveredBluetoothDevice>> = _discoveredDevices.asStateFlow()
 
@@ -47,18 +49,15 @@ class BleScannerManagerImpl @Inject constructor(
             val deviceAddress = device.address
             val rssi = result.rssi
 
+            Log.d("BleScannerManager", "Discovered: ${device.name ?: "Unnamed"} [$deviceAddress] RSSI: $rssi")
+
             // Updating the StateFlow triggers an automatic UI refresh.
             _discoveredDevices.update { currentList ->
-                val alreadyExists = currentList.any { it.address == deviceAddress }
-                if (alreadyExists) {
-                    // Update existing device (e.g., signal strength changes)
-                    currentList.map {
-                        if (it.address == deviceAddress) it.copy(name = deviceName, rssi = rssi) else it
-                    }
-                } else {
-                    // Add new device to the list
-                    currentList + DiscoveredBluetoothDevice(deviceName, deviceAddress, rssi)
-                }
+                val newDevice = DiscoveredBluetoothDevice(deviceName, deviceAddress, rssi)
+                // We filter out any previous instance of this device (same MAC address)
+                // and add the new one, then sort by signal strength (RSSI).
+                (currentList.filterNot { it.address == deviceAddress } + newDevice)
+                    .sortedByDescending { it.rssi }
             }
         }
 
@@ -79,15 +78,17 @@ class BleScannerManagerImpl @Inject constructor(
             return
         }
 
+        Log.d("BleScannerManager", "Starting BLE Scan...")
+
         _discoveredDevices.value = emptyList()
         isScanning = true
-        Log.d("BleScannerManager", "Starting BLE Scan...")
 
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
 
         try {
+            // Scanning with null filters to see if any devices show up.
             bleScanner?.startScan(null, settings, scanCallback)
         } catch (e: Exception) {
             Log.e("BleScannerManager", "Error starting scan", e)
