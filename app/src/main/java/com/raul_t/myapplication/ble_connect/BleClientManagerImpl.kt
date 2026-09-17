@@ -5,6 +5,12 @@ import android.bluetooth.*
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import com.raul_t.myapplication.ble.BleConstants.GATT_RETRY_DELAY_MS
+import com.raul_t.myapplication.ble.BleConstants.GATT_SETTLE_DELAY_MS
+import com.raul_t.myapplication.ble.BleConstants.GATT_ERROR_STALE
+import com.raul_t.myapplication.ble.BleConstants.HEART_RATE_VALUE_INDEX
+import com.raul_t.myapplication.ble.BleConstants.MIN_HEART_RATE_PACKET_SIZE
+import com.raul_t.myapplication.ble.BleConstants.WATCHDOG_TIMEOUT_MS
 import com.raul_t.myapplication.ble.GattServiceConstants
 import com.raul_t.myapplication.domain.model.SensorStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -83,7 +89,7 @@ class BleClientManagerImpl @Inject constructor(
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.i("BleClientManager", "Services DISCOVERED. Starting configuration chain...")
                 scope.launch {
-                    kotlinx.coroutines.delay(300)
+                    kotlinx.coroutines.delay(GATT_SETTLE_DELAY_MS)
                     enableHeartRateNotifications(gatt)
                 }
             } else {
@@ -113,11 +119,11 @@ class BleClientManagerImpl @Inject constructor(
                         }
                     }
                 }
-            } else if (status == 133 && !hasRetriedConfig) {
+            } else if (status == GATT_ERROR_STALE && !hasRetriedConfig) {
                 Log.w("BleClientManager", "Descriptor write 133 ERROR. Retrying HR config in 500ms...")
                 hasRetriedConfig = true
                 scope.launch {
-                    kotlinx.coroutines.delay(500)
+                    kotlinx.coroutines.delay(GATT_RETRY_DELAY_MS)
                     enableHeartRateNotifications(gatt)
                 }
             } else {
@@ -164,8 +170,8 @@ class BleClientManagerImpl @Inject constructor(
 
         when (characteristic.uuid) {
             GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID -> {
-                if (value.size >= 2) {
-                    val bpm = value[1].toInt() and 0xFF
+                if (value.size >= MIN_HEART_RATE_PACKET_SIZE) {
+                    val bpm = value[HEART_RATE_VALUE_INDEX].toInt() and 0xFF
                     Log.d("BleClientManager", "RECEIVED BPM: $bpm")
                     scope.launch { _heartRate.emit(bpm) }
                 } else {
@@ -218,15 +224,15 @@ class BleClientManagerImpl @Inject constructor(
     }
 
     private fun startWatchdog() {
-        Log.d("BleClientManager", "Watchdog STARTED (5s timeout)")
+        Log.d("BleClientManager", "Watchdog STARTED ($WATCHDOG_TIMEOUT_MS ms timeout)")
         resetWatchdog()
     }
 
     private fun resetWatchdog() {
         watchdogJob?.cancel()
         watchdogJob = scope.launch {
-            kotlinx.coroutines.delay(5000)
-            Log.w("BleClientManager", "WATCHDOG TIMEOUT! No data received for 5s. Triggering disconnection...")
+            kotlinx.coroutines.delay(WATCHDOG_TIMEOUT_MS)
+            Log.w("BleClientManager", "WATCHDOG TIMEOUT! No data received for ${WATCHDOG_TIMEOUT_MS/1000}s. Triggering disconnection...")
             _connectionState.value = BleClientConnectionState.Disconnected
             disconnect()
         }

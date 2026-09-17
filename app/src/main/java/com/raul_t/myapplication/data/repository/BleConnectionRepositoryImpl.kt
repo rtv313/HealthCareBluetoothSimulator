@@ -29,6 +29,10 @@ class BleConnectionRepositoryImpl @Inject constructor(
         dataSource.stopScanning()
     }
 
+    override fun clearDiscoveredDevices() {
+        dataSource.clearDiscoveredDevices()
+    }
+
     override fun connect(address: String) {
         dataSource.connect(address)
     }

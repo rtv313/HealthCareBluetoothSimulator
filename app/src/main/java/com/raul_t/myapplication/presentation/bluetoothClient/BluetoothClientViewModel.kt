@@ -17,6 +17,7 @@ class BluetoothClientViewModel @Inject constructor(
     private val observeDiscoveredDevicesUseCase: ObserveDiscoveredDevicesUseCase,
     private val startDeviceScanUseCase: StartDeviceScanUseCase,
     private val stopDeviceScanUseCase: StopDeviceScanUseCase,
+    private val clearDiscoveredDevicesUseCase: ClearDiscoveredDevicesUseCase,
     private val connectToDeviceUseCase: ConnectToDeviceUseCase,
     private val disconnectFromDeviceUseCase: DisconnectFromDeviceUseCase,
     private val observeClientConnectionStateUseCase: ObserveClientConnectionStateUseCase,
@@ -138,6 +139,12 @@ class BluetoothClientViewModel @Inject constructor(
 
     fun stopScanning() {
         stopDeviceScanUseCase()
+    }
+
+    fun refreshScanner() {
+        clearDiscoveredDevicesUseCase()
+        stopScanning()
+        startScanning()
     }
 
     fun selectDevice(device: DiscoveredBluetoothDevice) {

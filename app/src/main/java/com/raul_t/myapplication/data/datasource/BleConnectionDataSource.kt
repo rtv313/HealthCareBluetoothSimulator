@@ -29,6 +29,10 @@ class BleConnectionDataSource @Inject constructor(
         bleScannerManager.stopScanning()
     }
 
+    fun clearDiscoveredDevices() {
+        bleScannerManager.clearDiscoveredDevices()
+    }
+
     fun connect(address: String) {
         bleClientManager.connect(address)
     }
