@@ -21,6 +21,7 @@ class BluetoothClientViewModel @Inject constructor(
     private val observeClientConnectionStateUseCase: ObserveClientConnectionStateUseCase,
     private val observeReceivedHeartRateUseCase: ObserveReceivedHeartRateUseCase,
     private val observeReceivedSensorStatusUseCase: ObserveReceivedSensorStatusUseCase,
+    private val observeReceivedSensorNameUseCase: ObserveReceivedSensorNameUseCase,
     private val permissionChecker: PermissionChecker
 ) : ViewModel() {
 
@@ -56,6 +57,13 @@ class BluetoothClientViewModel @Inject constructor(
         viewModelScope.launch {
             observeReceivedSensorStatusUseCase().collect { status ->
                 _uiState.update { it.copy(mockStatus = status) }
+            }
+        }
+
+        // Observe real-time Sensor Name from connected sensor
+        viewModelScope.launch {
+            observeReceivedSensorNameUseCase().collect { name ->
+                _uiState.update { it.copy(mockName = name) }
             }
         }
         

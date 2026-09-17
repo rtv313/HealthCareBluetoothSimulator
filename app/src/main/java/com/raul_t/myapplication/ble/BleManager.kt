@@ -11,4 +11,5 @@ interface BleManager {
     fun isBluetoothEnabled(): Boolean
     fun updateHeartRate(bpm: Int)
     fun updateSensorStatus(status: SensorStatus)
+    fun updateSensorName(name: String)
 }

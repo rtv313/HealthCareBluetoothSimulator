@@ -19,6 +19,7 @@ class BleConnectionRepositoryImpl @Inject constructor(
     override val connectionState: StateFlow<BleClientConnectionState> = dataSource.connectionState
     override val heartRate: SharedFlow<Int> = dataSource.heartRate
     override val sensorStatus: SharedFlow<SensorStatus> = dataSource.sensorStatus
+    override val sensorName: SharedFlow<String> = dataSource.sensorName
 
     override fun startScanning() {
         dataSource.startScanning()

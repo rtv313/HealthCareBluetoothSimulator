@@ -19,6 +19,7 @@ class BleConnectionDataSource @Inject constructor(
     val connectionState: StateFlow<BleClientConnectionState> = bleClientManager.connectionState
     val heartRate: SharedFlow<Int> = bleClientManager.heartRate
     val sensorStatus: SharedFlow<SensorStatus> = bleClientManager.sensorStatus
+    val sensorName: SharedFlow<String> = bleClientManager.sensorName
 
     fun startScanning() {
         bleScannerManager.startScanning()

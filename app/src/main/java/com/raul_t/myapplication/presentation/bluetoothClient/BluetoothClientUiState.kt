@@ -10,5 +10,6 @@ data class BluetoothClientUiState(
     val connectedDevice: DiscoveredBluetoothDevice? = null,
     val connectionState: BleClientConnectionState = BleClientConnectionState.Disconnected,
     val mockBpm: Int = 72,
-    val mockStatus: SensorStatus = SensorStatus.Healthy
+    val mockStatus: SensorStatus = SensorStatus.Healthy,
+    val mockName: String = ""
 )

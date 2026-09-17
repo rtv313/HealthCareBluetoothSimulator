@@ -60,19 +60,20 @@ class HealthcareSimulationService : Service() {
             var lastSensorState: com.raul_t.myapplication.domain.model.BluetoothSensor? = null
             
             sensorDataSource.sensorState.collect { sensor ->
-                val nameChanged = lastSensorState?.name != sensor.name
                 val startStateChanged = lastSensorState?.isStarted != sensor.isStarted
                 val advertisingStateChanged = lastSensorState?.isAdvertising != sensor.isAdvertising
                 val statusChanged = lastSensorState?.status != sensor.status
+                val nameChanged = lastSensorState?.name != sensor.name
                 
                 // --- Handle Advertising Restart (Hard Update) ---
-                // We only restart advertising if the parameters that affect discovery change.
-                if (startStateChanged || nameChanged || advertisingStateChanged) {
+                // We ONLY restart advertising if the toggles change.
+                // Discovery name is now hardcoded to "Health Sensor", so name changes are ignored here.
+                if (startStateChanged || advertisingStateChanged) {
                     if (sensor.isStarted && sensor.isAdvertising) {
                         if (!bleManager.isBluetoothEnabled()) {
                             Log.e("HealthcareService", "Bluetooth is disabled, cannot advertise")
                         } else {
-                            Log.i("HealthcareService", "Restarting Advertising due to state/name change")
+                            Log.i("HealthcareService", "Starting Advertising")
                             bleManager.startAdvertising(sensor)
                         }
                     } else {
@@ -81,11 +82,12 @@ class HealthcareSimulationService : Service() {
                     }
                 }
 
-                // --- Handle Status Update (Soft Update) ---
-                // We push status updates via the existing GATT connection if possible.
-                if (statusChanged || (sensor.isStarted && sensor.isAdvertising && lastSensorState == null)) {
-                    Log.d("HealthcareService", "Updating Sensor Status via BLE: ${sensor.status}")
+                // --- Handle Dynamic Data Update (Soft Update) ---
+                // We push status AND name updates via the existing GATT connection.
+                if (statusChanged || nameChanged || (sensor.isStarted && sensor.isAdvertising && lastSensorState == null)) {
+                    Log.d("HealthcareService", "Updating Sensor Data via BLE: Status=${sensor.status} Name=${sensor.name}")
                     bleManager.updateSensorStatus(sensor.status)
+                    bleManager.updateSensorName(sensor.name)
                 }
                 
                 lastSensorState = sensor

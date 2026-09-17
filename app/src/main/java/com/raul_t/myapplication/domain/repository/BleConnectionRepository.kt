@@ -11,6 +11,7 @@ interface BleConnectionRepository {
     val connectionState: StateFlow<BleClientConnectionState>
     val heartRate: SharedFlow<Int>
     val sensorStatus: SharedFlow<SensorStatus>
+    val sensorName: SharedFlow<String>
 
     fun startScanning()
     fun stopScanning()
