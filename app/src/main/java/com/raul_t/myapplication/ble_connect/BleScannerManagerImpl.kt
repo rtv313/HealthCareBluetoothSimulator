@@ -45,11 +45,21 @@ class BleScannerManagerImpl @Inject constructor(
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
             super.onScanResult(callbackType, result)
             val device = result?.device ?: return
-            val deviceName = device.name ?: context.getString(R.string.ble_unknown_device)
+            val scanRecord = result.scanRecord
+            
+            // Prefer name from scan record, then device name, then unknown
+            val deviceName = scanRecord?.deviceName ?: device.name ?: context.getString(R.string.ble_unknown_device)
+            val targetName = context.getString(R.string.ble_default_device_name)
+            
+            // Filter: Only display our Health Sensor devices
+            if (deviceName != targetName) {
+                return
+            }
+
             val deviceAddress = device.address
             val rssi = result.rssi
 
-            Log.d("BleScannerManager", "Discovered: ${device.name ?: "Unnamed"} [$deviceAddress] RSSI: $rssi")
+            Log.d("BleScannerManager", "Discovered Sensor: $deviceName [$deviceAddress] RSSI: $rssi")
 
             // Updating the StateFlow triggers an automatic UI refresh.
             _discoveredDevices.update { currentList ->
