@@ -56,8 +56,13 @@ class BluetoothClientViewModel @Inject constructor(
                         }
                     }
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connected -> {
-                        // We don't overwrite mockName here anymore.
-                        // It stays as "Connecting..." until the GATT read/notification provides the real name.
+                        // Immediate release from "Connecting..." state.
+                        // We use the scan name as a fallback until the GATT read finishes.
+                        _uiState.update { 
+                            it.copy(
+                                mockName = it.connectedDevice?.name ?: "Health Sensor"
+                            )
+                        }
                     }
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Disconnected,
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Error -> {

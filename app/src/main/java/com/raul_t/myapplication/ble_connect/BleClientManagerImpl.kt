@@ -81,18 +81,10 @@ class BleClientManagerImpl @Inject constructor(
         @SuppressLint("MissingPermission")
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.i("BleClientManager", "Services DISCOVERED. Waiting for hardware to settle...")
+                Log.i("BleClientManager", "Services DISCOVERED. Starting configuration chain...")
                 scope.launch {
                     kotlinx.coroutines.delay(300)
                     enableHeartRateNotifications(gatt)
-                    
-                    // Trigger an initial read of the name characteristic to sync UI immediately
-                    val service = gatt?.getService(GattServiceConstants.SIMULATOR_SERVICE_UUID)
-                    val char = service?.getCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID)
-                    if (char != null) {
-                        Log.d("BleClientManager", "Performing initial read of Name characteristic...")
-                        gatt.readCharacteristic(char)
-                    }
                 }
             } else {
                 Log.e("BleClientManager", "Service discovery FAILED: status $status")
@@ -106,14 +98,19 @@ class BleClientManagerImpl @Inject constructor(
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (descriptor?.uuid == GattServiceConstants.CCCD_UUID) {
-                    if (charUuid == GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID) {
-                        Log.i("BleClientManager", "HR notifications ENABLED. Now enabling Status...")
-                        enableStatusNotifications(gatt)
-                    } else if (charUuid == GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID) {
-                        Log.i("BleClientManager", "Status notifications ENABLED. Now enabling Name...")
-                        enableNameNotifications(gatt)
-                    } else if (charUuid == GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID) {
-                        Log.i("BleClientManager", "Name notifications ENABLED. Setup complete.")
+                    when (charUuid) {
+                        GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID -> {
+                            Log.i("BleClientManager", "HR notifications ENABLED. Next: Status...")
+                            enableStatusNotifications(gatt)
+                        }
+                        GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID -> {
+                            Log.i("BleClientManager", "Status notifications ENABLED. Next: Name...")
+                            enableNameNotifications(gatt)
+                        }
+                        GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID -> {
+                            Log.i("BleClientManager", "Name notifications ENABLED. Configuration complete. Fetching initial data...")
+                            readInitialValues(gatt)
+                        }
                     }
                 }
             } else if (status == 133 && !hasRetriedConfig) {
@@ -145,6 +142,7 @@ class BleClientManagerImpl @Inject constructor(
 
         override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                resetWatchdog()
                 processCharacteristicUpdate(characteristic, value)
             }
         }
@@ -152,6 +150,7 @@ class BleClientManagerImpl @Inject constructor(
         @Suppress("DEPRECATION")
         override fun onCharacteristicRead(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS && characteristic != null) {
+                resetWatchdog()
                 processCharacteristicUpdate(characteristic, characteristic.value)
             }
         }
@@ -219,15 +218,15 @@ class BleClientManagerImpl @Inject constructor(
     }
 
     private fun startWatchdog() {
-        Log.d("BleClientManager", "Watchdog STARTED (7s timeout)")
+        Log.d("BleClientManager", "Watchdog STARTED (5s timeout)")
         resetWatchdog()
     }
 
     private fun resetWatchdog() {
         watchdogJob?.cancel()
         watchdogJob = scope.launch {
-            kotlinx.coroutines.delay(7000)
-            Log.w("BleClientManager", "WATCHDOG TIMEOUT! No data received for 7s. Triggering disconnection...")
+            kotlinx.coroutines.delay(5000)
+            Log.w("BleClientManager", "WATCHDOG TIMEOUT! No data received for 5s. Triggering disconnection...")
             _connectionState.value = BleClientConnectionState.Disconnected
             disconnect()
         }
@@ -237,6 +236,27 @@ class BleClientManagerImpl @Inject constructor(
         Log.d("BleClientManager", "Watchdog STOPPED")
         watchdogJob?.cancel()
         watchdogJob = null
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun readInitialValues(gatt: BluetoothGatt?) {
+        val service = gatt?.getService(GattServiceConstants.SIMULATOR_SERVICE_UUID)
+        
+        // Read Name first
+        val nameChar = service?.getCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID)
+        if (nameChar != null) {
+            Log.d("BleClientManager", "Reading initial Name...")
+            gatt.readCharacteristic(nameChar)
+        }
+        
+        // Note: In some Android versions, you should wait for the first read to finish 
+        // before starting the second one. However, most modern ones queue them.
+        // We'll read status too.
+        val statusChar = service?.getCharacteristic(GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID)
+        if (statusChar != null) {
+            Log.d("BleClientManager", "Reading initial Status...")
+            gatt.readCharacteristic(statusChar)
+        }
     }
 
     @SuppressLint("MissingPermission")
