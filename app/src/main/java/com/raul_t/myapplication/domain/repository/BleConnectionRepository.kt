@@ -15,6 +15,7 @@ interface BleConnectionRepository {
 
     fun startScanning()
     fun stopScanning()
+    fun clearDiscoveredDevices()
 
     fun connect(address: String)
     fun disconnect()

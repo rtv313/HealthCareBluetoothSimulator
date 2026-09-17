@@ -7,4 +7,5 @@ interface BleScannerManager {
     val discoveredDevices: StateFlow<List<DiscoveredBluetoothDevice>>
     fun startScanning()
     fun stopScanning()
+    fun clearDiscoveredDevices()
 }
