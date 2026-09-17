@@ -55,26 +55,40 @@ class HealthcareSimulationService : Service() {
             }
         }
 
-        // 2. BLE Status Relay: Listen to status changes and push to BLE
+        // 2. Smarter BLE Advertising & Status Management
         serviceScope.launch {
+            var lastSensorState: com.raul_t.myapplication.domain.model.BluetoothSensor? = null
+            
             sensorDataSource.sensorState.collect { sensor ->
-                Log.d("HealthcareService", "Relaying Status to BLE: ${sensor.status}")
-                bleManager.updateSensorStatus(sensor.status)
-            }
-        }
-
-        // 3. BLE Advertising Management
-        serviceScope.launch {
-            sensorDataSource.sensorState.collect { sensor ->
-                if (sensor.isStarted && sensor.isAdvertising) {
-                    if (!bleManager.isBluetoothEnabled()) {
-                        Log.e("HealthcareService", "Bluetooth is disabled, cannot advertise")
+                val nameChanged = lastSensorState?.name != sensor.name
+                val startStateChanged = lastSensorState?.isStarted != sensor.isStarted
+                val advertisingStateChanged = lastSensorState?.isAdvertising != sensor.isAdvertising
+                val statusChanged = lastSensorState?.status != sensor.status
+                
+                // --- Handle Advertising Restart (Hard Update) ---
+                // We only restart advertising if the parameters that affect discovery change.
+                if (startStateChanged || nameChanged || advertisingStateChanged) {
+                    if (sensor.isStarted && sensor.isAdvertising) {
+                        if (!bleManager.isBluetoothEnabled()) {
+                            Log.e("HealthcareService", "Bluetooth is disabled, cannot advertise")
+                        } else {
+                            Log.i("HealthcareService", "Restarting Advertising due to state/name change")
+                            bleManager.startAdvertising(sensor)
+                        }
                     } else {
-                        bleManager.startAdvertising(sensor)
+                        Log.i("HealthcareService", "Stopping Advertising")
+                        bleManager.stopAdvertising()
                     }
-                } else {
-                    bleManager.stopAdvertising()
                 }
+
+                // --- Handle Status Update (Soft Update) ---
+                // We push status updates via the existing GATT connection if possible.
+                if (statusChanged || (sensor.isStarted && sensor.isAdvertising && lastSensorState == null)) {
+                    Log.d("HealthcareService", "Updating Sensor Status via BLE: ${sensor.status}")
+                    bleManager.updateSensorStatus(sensor.status)
+                }
+                
+                lastSensorState = sensor
             }
         }
     }

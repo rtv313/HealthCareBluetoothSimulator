@@ -51,6 +51,7 @@ class BleManagerImpl @Inject constructor(
 
     private var serviceAdditionIndex = 0
     private var isPinEnabledForServices: Boolean = false
+    private var currentName: String? = null
 
     private val advertiseCallback = object : AdvertiseCallback() {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
@@ -162,13 +163,31 @@ class BleManagerImpl @Inject constructor(
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) return
         bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser ?: return
         
-        bluetoothAdapter.name = sensor.name.ifBlank { context.getString(R.string.ble_default_device_name) }
-        this.isPinEnabled = sensor.isPinEnabled
-        bluetoothGattServer = bluetoothManager?.openGattServer(context, gattServerCallback)
+        val newName = sensor.name.ifBlank { context.getString(R.string.ble_default_device_name) }
+        val nameChanged = newName != currentName
         
-        serviceAdditionIndex = 0
-        this.isPinEnabledForServices = sensor.isPinEnabled
-        addNextService()
+        // If GATT server is already running and name hasn't changed, we might not need a full restart.
+        // However, standard BLE behavior often requires restarting advertising if parameters change.
+        if (bluetoothGattServer != null && !nameChanged) {
+            Log.d("BleManager", "GATT server already running and name unchanged. Skipping full restart.")
+            return
+        }
+
+        // If we are already advertising, stop the old one first.
+        bluetoothLeAdvertiser?.stopAdvertising(advertiseCallback)
+        
+        bluetoothAdapter.name = newName
+        currentName = newName
+        this.isPinEnabled = sensor.isPinEnabled
+        
+        // Only open a new GATT server if one isn't already active.
+        // This is crucial to avoid disconnecting current clients.
+        if (bluetoothGattServer == null) {
+            bluetoothGattServer = bluetoothManager?.openGattServer(context, gattServerCallback)
+            serviceAdditionIndex = 0
+            this.isPinEnabledForServices = sensor.isPinEnabled
+            addNextService()
+        }
 
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
@@ -180,6 +199,8 @@ class BleManagerImpl @Inject constructor(
             .setIncludeDeviceName(true)
             .addServiceUuid(ParcelUuid(GattServiceConstants.HEART_RATE_SERVICE_UUID))
             .build()
+        
+        Log.i("BleManager", "Starting advertising with name: $newName")
         bluetoothLeAdvertiser?.startAdvertising(settings, data, advertiseCallback)
     }
 
@@ -194,6 +215,7 @@ class BleManagerImpl @Inject constructor(
         connectedDevice = null
         authenticatedDevices.clear()
         notificationSubscriptions.clear()
+        currentName = null
         _connectionState.value = BleConnectionState.Idle
     }
 
