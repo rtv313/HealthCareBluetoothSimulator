@@ -31,13 +31,14 @@ fun ConnectedSensorPanel(
     connectedDevice: DiscoveredBluetoothDevice,
     mockBpm: Int,
     mockStatus: SensorStatus,
+    mockName: String,
     onDisconnect: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = LightSuccessGreen.copy(alpha = 0.2f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         )
     ) {
         Column(
@@ -50,27 +51,27 @@ fun ConnectedSensorPanel(
             ) {
                 Column {
                     Text(
-                        text = androidx.compose.ui.res.stringResource(R.string.device_name_label),
+                        text = stringResource(R.string.device_name_label),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = connectedDevice.name,
+                        text = mockName.ifBlank { connectedDevice.name },
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = androidx.compose.ui.res.stringResource(R.string.sensor_status_label),
+                        text = stringResource(R.string.sensor_status_label),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = when(mockStatus) {
-                            SensorStatus.Healthy -> androidx.compose.ui.res.stringResource(R.string.status_healthy)
-                            SensorStatus.Damaged -> androidx.compose.ui.res.stringResource(R.string.status_damaged)
-                            SensorStatus.Offline -> androidx.compose.ui.res.stringResource(R.string.status_offline)
+                            SensorStatus.Healthy -> stringResource(R.string.status_healthy)
+                            SensorStatus.Damaged -> stringResource(R.string.status_damaged)
+                            SensorStatus.Offline -> stringResource(R.string.status_offline)
                         },
                         fontWeight = FontWeight.Bold,
                         color = if (mockStatus == SensorStatus.Healthy) SuccessGreen else MaterialTheme.colorScheme.error,

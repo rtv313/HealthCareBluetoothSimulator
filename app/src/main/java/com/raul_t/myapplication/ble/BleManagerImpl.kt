@@ -38,6 +38,7 @@ class BleManagerImpl @Inject constructor(
 
     private var heartRateCharacteristic: BluetoothGattCharacteristic? = null
     private var statusCharacteristic: BluetoothGattCharacteristic? = null
+    private var sensorNameCharacteristic: BluetoothGattCharacteristic? = null
     
     private var connectedDevice: BluetoothDevice? = null
     private val authenticatedDevices = mutableSetOf<String>()
@@ -163,25 +164,24 @@ class BleManagerImpl @Inject constructor(
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) return
         bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser ?: return
         
-        val newName = sensor.name.ifBlank { context.getString(R.string.ble_default_device_name) }
-        val nameChanged = newName != currentName
+        // Hardcode the discovery name as requested
+        val discoveryName = "Health Sensor"
+        val nameChanged = discoveryName != currentName
         
-        // If GATT server is already running and name hasn't changed, we might not need a full restart.
-        // However, standard BLE behavior often requires restarting advertising if parameters change.
+        // If GATT server is already running and discovery name hasn't changed, we don't need a full restart.
         if (bluetoothGattServer != null && !nameChanged) {
-            Log.d("BleManager", "GATT server already running and name unchanged. Skipping full restart.")
+            Log.d("BleManager", "GATT server already running with name '$discoveryName'. Skipping full restart.")
             return
         }
 
         // If we are already advertising, stop the old one first.
         bluetoothLeAdvertiser?.stopAdvertising(advertiseCallback)
         
-        bluetoothAdapter.name = newName
-        currentName = newName
+        bluetoothAdapter.name = discoveryName
+        currentName = discoveryName
         this.isPinEnabled = sensor.isPinEnabled
         
         // Only open a new GATT server if one isn't already active.
-        // This is crucial to avoid disconnecting current clients.
         if (bluetoothGattServer == null) {
             bluetoothGattServer = bluetoothManager?.openGattServer(context, gattServerCallback)
             serviceAdditionIndex = 0
@@ -200,7 +200,7 @@ class BleManagerImpl @Inject constructor(
             .addServiceUuid(ParcelUuid(GattServiceConstants.HEART_RATE_SERVICE_UUID))
             .build()
         
-        Log.i("BleManager", "Starting advertising with name: $newName")
+        Log.i("BleManager", "Starting advertising as: $discoveryName")
         bluetoothLeAdvertiser?.startAdvertising(settings, data, advertiseCallback)
     }
 
@@ -212,6 +212,7 @@ class BleManagerImpl @Inject constructor(
         bluetoothGattServer = null
         heartRateCharacteristic = null
         statusCharacteristic = null
+        sensorNameCharacteristic = null
         connectedDevice = null
         authenticatedDevices.clear()
         notificationSubscriptions.clear()
@@ -273,6 +274,31 @@ class BleManagerImpl @Inject constructor(
     }
 
     @SuppressLint("MissingPermission")
+    override fun updateSensorName(name: String) {
+        val char = sensorNameCharacteristic ?: return
+        val device = connectedDevice ?: return
+        if (notificationSubscriptions[device.address]?.contains(char.uuid) != true) return
+        if (isPinEnabled && !authenticatedDevices.contains(device.address)) return
+
+        val data = name.toByteArray(Charsets.UTF_8)
+        @Suppress("DEPRECATION")
+        char.value = data
+        
+        val success = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            bluetoothGattServer?.notifyCharacteristicChanged(device, char, false, data)
+        } else {
+            @Suppress("DEPRECATION")
+            bluetoothGattServer?.notifyCharacteristicChanged(device, char, false)
+        }
+        
+        if (success == BluetoothGatt.GATT_SUCCESS || success == true) {
+            Log.d("BleManager", "Notified Name: $name to ${device.address} - SUCCESS")
+        } else {
+            Log.e("BleManager", "Notified Name: $name to ${device.address} - FAILED ($success)")
+        }
+    }
+
+    @SuppressLint("MissingPermission")
     private fun addNextService() {
         val server = bluetoothGattServer ?: return
         when (serviceAdditionIndex) {
@@ -286,10 +312,19 @@ class BleManagerImpl @Inject constructor(
             }
             1 -> {
                 val metaService = BluetoothGattService(GattServiceConstants.SIMULATOR_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
+                
+                // Status Characteristic
                 val sChar = BluetoothGattCharacteristic(GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY, if (isPinEnabledForServices) BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED else BluetoothGattCharacteristic.PERMISSION_READ)
                 sChar.addDescriptor(BluetoothGattDescriptor(GattServiceConstants.CCCD_UUID, BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE))
                 statusCharacteristic = sChar
                 metaService.addCharacteristic(sChar)
+                
+                // Name Characteristic
+                val nChar = BluetoothGattCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY, if (isPinEnabledForServices) BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED else BluetoothGattCharacteristic.PERMISSION_READ)
+                nChar.addDescriptor(BluetoothGattDescriptor(GattServiceConstants.CCCD_UUID, BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE))
+                sensorNameCharacteristic = nChar
+                metaService.addCharacteristic(nChar)
+                
                 metaService.addCharacteristic(BluetoothGattCharacteristic(GattServiceConstants.PIN_VALIDATION_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_WRITE, BluetoothGattCharacteristic.PERMISSION_WRITE))
                 server.addService(metaService)
             }

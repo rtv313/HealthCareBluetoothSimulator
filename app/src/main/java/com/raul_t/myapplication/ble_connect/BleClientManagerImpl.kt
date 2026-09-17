@@ -43,6 +43,9 @@ class BleClientManagerImpl @Inject constructor(
     private val _sensorStatus = MutableSharedFlow<SensorStatus>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val sensorStatus: SharedFlow<SensorStatus> = _sensorStatus.asSharedFlow()
 
+    private val _sensorName = MutableSharedFlow<String>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    override val sensorName: SharedFlow<String> = _sensorName.asSharedFlow()
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var hasRetriedConfig = false
 
@@ -93,7 +96,10 @@ class BleClientManagerImpl @Inject constructor(
                         Log.i("BleClientManager", "HR notifications ENABLED. Now enabling Status...")
                         enableStatusNotifications(gatt)
                     } else if (charUuid == GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID) {
-                        Log.i("BleClientManager", "Status notifications ENABLED. Setup complete.")
+                        Log.i("BleClientManager", "Status notifications ENABLED. Now enabling Name...")
+                        enableNameNotifications(gatt)
+                    } else if (charUuid == GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID) {
+                        Log.i("BleClientManager", "Name notifications ENABLED. Setup complete.")
                     }
                 }
             } else if (status == 133 && !hasRetriedConfig) {
@@ -148,6 +154,11 @@ class BleClientManagerImpl @Inject constructor(
                     SensorStatus.Healthy
                 }
                 scope.launch { _sensorStatus.emit(status) }
+            }
+            GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID -> {
+                val name = String(value, Charsets.UTF_8)
+                Log.d("BleClientManager", "RECEIVED Name: $name")
+                scope.launch { _sensorName.emit(name) }
             }
         }
     }
@@ -229,6 +240,34 @@ class BleClientManagerImpl @Inject constructor(
             }
         } else {
             Log.e("BleClientManager", "Status characteristic not found!")
+            enableNameNotifications(gatt)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enableNameNotifications(gatt: BluetoothGatt?) {
+        val service = gatt?.getService(GattServiceConstants.SIMULATOR_SERVICE_UUID)
+        val char = service?.getCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID)
+        if (char != null) {
+            val success = gatt.setCharacteristicNotification(char, true)
+            Log.d("BleClientManager", "setCharacteristicNotification (Name) result: $success")
+            
+            val desc = char.getDescriptor(GattServiceConstants.CCCD_UUID)
+            if (desc != null) {
+                Log.d("BleClientManager", "Requesting Name notification write to CCCD")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    gatt.writeDescriptor(desc, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    desc.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    @Suppress("DEPRECATION")
+                    gatt.writeDescriptor(desc)
+                }
+            } else {
+                Log.e("BleClientManager", "Name CCCD descriptor not found!")
+            }
+        } else {
+            Log.e("BleClientManager", "Name characteristic not found!")
         }
     }
 }

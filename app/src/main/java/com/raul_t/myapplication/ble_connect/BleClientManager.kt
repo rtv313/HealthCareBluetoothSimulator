@@ -8,6 +8,7 @@ interface BleClientManager {
     val connectionState: StateFlow<BleClientConnectionState>
     val heartRate: SharedFlow<Int>
     val sensorStatus: SharedFlow<SensorStatus>
+    val sensorName: SharedFlow<String>
 
     fun connect(address: String)
     fun disconnect()

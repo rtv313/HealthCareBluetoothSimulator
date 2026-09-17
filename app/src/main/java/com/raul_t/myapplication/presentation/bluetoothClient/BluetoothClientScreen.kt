@@ -102,6 +102,7 @@ fun BluetoothClientScreen(
                 connectedDevice = connectedDevice,
                 mockBpm = uiState.mockBpm,
                 mockStatus = uiState.mockStatus,
+                mockName = uiState.mockName,
                 onDisconnect = { viewModel.disconnect() }
             )
         }
