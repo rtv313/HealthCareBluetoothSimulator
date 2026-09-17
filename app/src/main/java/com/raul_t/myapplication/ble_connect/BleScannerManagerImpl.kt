@@ -10,6 +10,8 @@ import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
 import com.raul_t.myapplication.R
+import com.raul_t.myapplication.ble.BleConstants.DISCOVERY_CLEANUP_INTERVAL_MS
+import com.raul_t.myapplication.ble.BleConstants.DISCOVERY_STALE_THRESHOLD_MS
 import com.raul_t.myapplication.ble.GattServiceConstants
 import com.raul_t.myapplication.domain.model.DiscoveredBluetoothDevice
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -139,10 +141,10 @@ class BleScannerManagerImpl @Inject constructor(
         cleanupJob?.cancel()
         cleanupJob = scannerScope.launch {
             while (isActive) {
-                delay(1.seconds)
+                delay(DISCOVERY_CLEANUP_INTERVAL_MS)
                 val now = System.currentTimeMillis()
                 _discoveredDevices.update { currentList ->
-                    currentList.filter { (now - it.lastSeen) < 3000 }
+                    currentList.filter { (now - it.lastSeen) < DISCOVERY_STALE_THRESHOLD_MS }
                 }
             }
         }
