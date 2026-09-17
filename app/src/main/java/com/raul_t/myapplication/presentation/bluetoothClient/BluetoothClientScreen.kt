@@ -85,7 +85,7 @@ fun BluetoothClientScreen(
         }
 
         // Component 3: Observation Data Summary Panel
-        uiState.connectedDevice?.let { connectedDevice ->
+        if (uiState.connectedDevice != null) {
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
@@ -99,7 +99,6 @@ fun BluetoothClientScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             ConnectedSensorPanel(
-                connectedDevice = connectedDevice,
                 mockBpm = uiState.mockBpm,
                 mockStatus = uiState.mockStatus,
                 mockName = uiState.mockName,

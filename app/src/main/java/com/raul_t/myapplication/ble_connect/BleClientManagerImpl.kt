@@ -47,13 +47,15 @@ class BleClientManagerImpl @Inject constructor(
     override val sensorName: SharedFlow<String> = _sensorName.asSharedFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var watchdogJob: kotlinx.coroutines.Job? = null
     private var hasRetriedConfig = false
 
     private val gattCallback = object : BluetoothGattCallback() {
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
-            Log.d("BleClientManager", "onConnectionStateChange: status=$status newState=$newState")
+            Log.d("BleClientManager", "onConnectionStateChange: status=$status newState=$newState (Device: ${gatt?.device?.address})")
             if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.e("BleClientManager", "GATT Error detected. Status: $status. Disconnecting...")
                 hasRetriedConfig = false
                 _connectionState.value = BleClientConnectionState.Error("Connection failed with status: $status")
                 disconnect()
@@ -65,10 +67,14 @@ class BleClientManagerImpl @Inject constructor(
                 _connectionState.value = BleClientConnectionState.Connected
                 Log.i("BleClientManager", "CONNECTED to GATT. Discovering services...")
                 gatt?.discoverServices()
+                startWatchdog()
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                Log.w("BleClientManager", "STATE_DISCONNECTED received from hardware.")
                 hasRetriedConfig = false
+                stopWatchdog()
                 _connectionState.value = BleClientConnectionState.Disconnected
-                Log.i("BleClientManager", "DISCONNECTED from GATT")
+                // Note: We don't call disconnect() here because the system already disconnected us.
+                // We just clean up our local reference if needed in disconnect() logic.
             }
         }
 
@@ -79,6 +85,14 @@ class BleClientManagerImpl @Inject constructor(
                 scope.launch {
                     kotlinx.coroutines.delay(300)
                     enableHeartRateNotifications(gatt)
+                    
+                    // Trigger an initial read of the name characteristic to sync UI immediately
+                    val service = gatt?.getService(GattServiceConstants.SIMULATOR_SERVICE_UUID)
+                    val char = service?.getCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID)
+                    if (char != null) {
+                        Log.d("BleClientManager", "Performing initial read of Name characteristic...")
+                        gatt.readCharacteristic(char)
+                    }
                 }
             } else {
                 Log.e("BleClientManager", "Service discovery FAILED: status $status")
@@ -116,6 +130,7 @@ class BleClientManagerImpl @Inject constructor(
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
             Log.v("BleClientManager", "onCharacteristicChanged (Modern API): char=${characteristic.uuid} value=${value.contentToString()}")
+            resetWatchdog()
             processCharacteristicUpdate(characteristic, value)
         }
 
@@ -123,6 +138,20 @@ class BleClientManagerImpl @Inject constructor(
         override fun onCharacteristicChanged(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?) {
             if (characteristic != null) {
                 Log.v("BleClientManager", "onCharacteristicChanged (Legacy API): char=${characteristic.uuid}")
+                resetWatchdog()
+                processCharacteristicUpdate(characteristic, characteristic.value)
+            }
+        }
+
+        override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                processCharacteristicUpdate(characteristic, value)
+            }
+        }
+
+        @Suppress("DEPRECATION")
+        override fun onCharacteristicRead(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS && characteristic != null) {
                 processCharacteristicUpdate(characteristic, characteristic.value)
             }
         }
@@ -182,10 +211,32 @@ class BleClientManagerImpl @Inject constructor(
     @SuppressLint("MissingPermission")
     override fun disconnect() {
         Log.i("BleClientManager", "Disconnecting GATT")
+        stopWatchdog()
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         bluetoothGatt = null
         _connectionState.value = BleClientConnectionState.Disconnected
+    }
+
+    private fun startWatchdog() {
+        Log.d("BleClientManager", "Watchdog STARTED (7s timeout)")
+        resetWatchdog()
+    }
+
+    private fun resetWatchdog() {
+        watchdogJob?.cancel()
+        watchdogJob = scope.launch {
+            kotlinx.coroutines.delay(7000)
+            Log.w("BleClientManager", "WATCHDOG TIMEOUT! No data received for 7s. Triggering disconnection...")
+            _connectionState.value = BleClientConnectionState.Disconnected
+            disconnect()
+        }
+    }
+
+    private fun stopWatchdog() {
+        Log.d("BleClientManager", "Watchdog STOPPED")
+        watchdogJob?.cancel()
+        watchdogJob = null
     }
 
     @SuppressLint("MissingPermission")

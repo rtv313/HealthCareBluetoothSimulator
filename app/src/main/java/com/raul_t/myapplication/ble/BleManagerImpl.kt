@@ -208,6 +208,13 @@ class BleManagerImpl @Inject constructor(
     override fun stopAdvertising() {
         bluetoothLeAdvertiser?.stopAdvertising(advertiseCallback)
         bluetoothLeAdvertiser = null
+        
+        // Force disconnect any active client before closing
+        connectedDevice?.let { device ->
+            Log.i("BleManager", "Forcefully disconnecting client: ${device.address}")
+            bluetoothGattServer?.cancelConnection(device)
+        }
+        
         bluetoothGattServer?.close()
         bluetoothGattServer = null
         heartRateCharacteristic = null
@@ -280,7 +287,9 @@ class BleManagerImpl @Inject constructor(
         if (notificationSubscriptions[device.address]?.contains(char.uuid) != true) return
         if (isPinEnabled && !authenticatedDevices.contains(device.address)) return
 
-        val data = name.toByteArray(Charsets.UTF_8)
+        val discoveryDefault = context.getString(R.string.ble_default_device_name)
+        val finalName = name.ifBlank { discoveryDefault }
+        val data = finalName.toByteArray(Charsets.UTF_8)
         @Suppress("DEPRECATION")
         char.value = data
         
@@ -292,9 +301,9 @@ class BleManagerImpl @Inject constructor(
         }
         
         if (success == BluetoothGatt.GATT_SUCCESS || success == true) {
-            Log.d("BleManager", "Notified Name: $name to ${device.address} - SUCCESS")
+            Log.d("BleManager", "Notified Name: $finalName to ${device.address} - SUCCESS")
         } else {
-            Log.e("BleManager", "Notified Name: $name to ${device.address} - FAILED ($success)")
+            Log.e("BleManager", "Notified Name: $finalName to ${device.address} - FAILED ($success)")
         }
     }
 
@@ -322,6 +331,13 @@ class BleManagerImpl @Inject constructor(
                 // Name Characteristic
                 val nChar = BluetoothGattCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY, if (isPinEnabledForServices) BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED else BluetoothGattCharacteristic.PERMISSION_READ)
                 nChar.addDescriptor(BluetoothGattDescriptor(GattServiceConstants.CCCD_UUID, BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE))
+                
+                // Initialize with current name
+                val discoveryDefault = context.getString(R.string.ble_default_device_name)
+                val currentSensorName = sensorDataSource.sensorState.value.name.ifBlank { discoveryDefault }
+                @Suppress("DEPRECATION")
+                nChar.value = currentSensorName.toByteArray(Charsets.UTF_8)
+                
                 sensorNameCharacteristic = nChar
                 metaService.addCharacteristic(nChar)
                 

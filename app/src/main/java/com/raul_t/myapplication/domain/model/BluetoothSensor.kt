@@ -1,7 +1,7 @@
 package com.raul_t.myapplication.domain.model
 
 enum class SensorStatus {
-    Healthy, Damaged, Offline
+    Healthy, Damaged, Offline, Disconnected
 }
 
 data class BluetoothSensor(
