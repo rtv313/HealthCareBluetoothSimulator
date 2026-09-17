@@ -1,5 +1,6 @@
 package com.raul_t.myapplication.presentation.bluetoothClient
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.raul_t.myapplication.core.util.PermissionChecker
@@ -42,28 +43,72 @@ class BluetoothClientViewModel @Inject constructor(
         // Observe GATT connection state
         viewModelScope.launch {
             observeClientConnectionStateUseCase().collect { state ->
+                Log.d("BluetoothClientVM", "Connection State Changed: $state")
                 _uiState.update { it.copy(connectionState = state) }
+                
+                when (state) {
+                    is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connecting -> {
+                        _uiState.update { 
+                            it.copy(
+                                mockName = "Connecting...",
+                                mockBpm = -1
+                            )
+                        }
+                    }
+                    is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connected -> {
+                        // Immediate release from "Connecting..." state.
+                        // We use the scan name as a fallback until the GATT read finishes.
+                        _uiState.update { 
+                            it.copy(
+                                mockName = it.connectedDevice?.name ?: "Health Sensor"
+                            )
+                        }
+                    }
+                    is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Disconnected,
+                    is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Error -> {
+                        // Only show "Server Stopped" if we were previously trying to stay connected
+                        if (_uiState.value.connectedDevice != null) {
+                            Log.w("BluetoothClientVM", "COMMUNICATION LOST: Setting UI to Server Stopped.")
+                            _uiState.update { 
+                                it.copy(
+                                    mockName = "Server Stopped",
+                                    mockBpm = -1,
+                                    mockStatus = com.raul_t.myapplication.domain.model.SensorStatus.Disconnected
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
         // Observe real-time Heart Rate from connected sensor
         viewModelScope.launch {
             observeReceivedHeartRateUseCase().collect { bpm ->
-                _uiState.update { it.copy(mockBpm = bpm) }
+                if (_uiState.value.connectionState is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connected) {
+                    Log.v("BluetoothClientVM", "Received Heart Rate: $bpm")
+                    _uiState.update { it.copy(mockBpm = bpm) }
+                }
             }
         }
 
         // Observe real-time Sensor Status from connected sensor
         viewModelScope.launch {
             observeReceivedSensorStatusUseCase().collect { status ->
-                _uiState.update { it.copy(mockStatus = status) }
+                if (_uiState.value.connectionState is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connected) {
+                    Log.v("BluetoothClientVM", "Received Sensor Status: $status")
+                    _uiState.update { it.copy(mockStatus = status) }
+                }
             }
         }
 
         // Observe real-time Sensor Name from connected sensor
         viewModelScope.launch {
             observeReceivedSensorNameUseCase().collect { name ->
-                _uiState.update { it.copy(mockName = name) }
+                if (_uiState.value.connectionState is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connected) {
+                    Log.v("BluetoothClientVM", "Received Sensor Name: $name")
+                    _uiState.update { it.copy(mockName = name) }
+                }
             }
         }
         

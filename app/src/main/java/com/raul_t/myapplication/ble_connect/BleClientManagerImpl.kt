@@ -47,13 +47,15 @@ class BleClientManagerImpl @Inject constructor(
     override val sensorName: SharedFlow<String> = _sensorName.asSharedFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var watchdogJob: kotlinx.coroutines.Job? = null
     private var hasRetriedConfig = false
 
     private val gattCallback = object : BluetoothGattCallback() {
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
-            Log.d("BleClientManager", "onConnectionStateChange: status=$status newState=$newState")
+            Log.d("BleClientManager", "onConnectionStateChange: status=$status newState=$newState (Device: ${gatt?.device?.address})")
             if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.e("BleClientManager", "GATT Error detected. Status: $status. Disconnecting...")
                 hasRetriedConfig = false
                 _connectionState.value = BleClientConnectionState.Error("Connection failed with status: $status")
                 disconnect()
@@ -65,17 +67,21 @@ class BleClientManagerImpl @Inject constructor(
                 _connectionState.value = BleClientConnectionState.Connected
                 Log.i("BleClientManager", "CONNECTED to GATT. Discovering services...")
                 gatt?.discoverServices()
+                startWatchdog()
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                Log.w("BleClientManager", "STATE_DISCONNECTED received from hardware.")
                 hasRetriedConfig = false
+                stopWatchdog()
                 _connectionState.value = BleClientConnectionState.Disconnected
-                Log.i("BleClientManager", "DISCONNECTED from GATT")
+                // Note: We don't call disconnect() here because the system already disconnected us.
+                // We just clean up our local reference if needed in disconnect() logic.
             }
         }
 
         @SuppressLint("MissingPermission")
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.i("BleClientManager", "Services DISCOVERED. Waiting for hardware to settle...")
+                Log.i("BleClientManager", "Services DISCOVERED. Starting configuration chain...")
                 scope.launch {
                     kotlinx.coroutines.delay(300)
                     enableHeartRateNotifications(gatt)
@@ -92,14 +98,19 @@ class BleClientManagerImpl @Inject constructor(
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (descriptor?.uuid == GattServiceConstants.CCCD_UUID) {
-                    if (charUuid == GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID) {
-                        Log.i("BleClientManager", "HR notifications ENABLED. Now enabling Status...")
-                        enableStatusNotifications(gatt)
-                    } else if (charUuid == GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID) {
-                        Log.i("BleClientManager", "Status notifications ENABLED. Now enabling Name...")
-                        enableNameNotifications(gatt)
-                    } else if (charUuid == GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID) {
-                        Log.i("BleClientManager", "Name notifications ENABLED. Setup complete.")
+                    when (charUuid) {
+                        GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID -> {
+                            Log.i("BleClientManager", "HR notifications ENABLED. Next: Status...")
+                            enableStatusNotifications(gatt)
+                        }
+                        GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID -> {
+                            Log.i("BleClientManager", "Status notifications ENABLED. Next: Name...")
+                            enableNameNotifications(gatt)
+                        }
+                        GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID -> {
+                            Log.i("BleClientManager", "Name notifications ENABLED. Configuration complete. Fetching initial data...")
+                            readInitialValues(gatt)
+                        }
                     }
                 }
             } else if (status == 133 && !hasRetriedConfig) {
@@ -116,6 +127,7 @@ class BleClientManagerImpl @Inject constructor(
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
             Log.v("BleClientManager", "onCharacteristicChanged (Modern API): char=${characteristic.uuid} value=${value.contentToString()}")
+            resetWatchdog()
             processCharacteristicUpdate(characteristic, value)
         }
 
@@ -123,6 +135,22 @@ class BleClientManagerImpl @Inject constructor(
         override fun onCharacteristicChanged(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?) {
             if (characteristic != null) {
                 Log.v("BleClientManager", "onCharacteristicChanged (Legacy API): char=${characteristic.uuid}")
+                resetWatchdog()
+                processCharacteristicUpdate(characteristic, characteristic.value)
+            }
+        }
+
+        override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                resetWatchdog()
+                processCharacteristicUpdate(characteristic, value)
+            }
+        }
+
+        @Suppress("DEPRECATION")
+        override fun onCharacteristicRead(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS && characteristic != null) {
+                resetWatchdog()
                 processCharacteristicUpdate(characteristic, characteristic.value)
             }
         }
@@ -182,10 +210,53 @@ class BleClientManagerImpl @Inject constructor(
     @SuppressLint("MissingPermission")
     override fun disconnect() {
         Log.i("BleClientManager", "Disconnecting GATT")
+        stopWatchdog()
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         bluetoothGatt = null
         _connectionState.value = BleClientConnectionState.Disconnected
+    }
+
+    private fun startWatchdog() {
+        Log.d("BleClientManager", "Watchdog STARTED (5s timeout)")
+        resetWatchdog()
+    }
+
+    private fun resetWatchdog() {
+        watchdogJob?.cancel()
+        watchdogJob = scope.launch {
+            kotlinx.coroutines.delay(5000)
+            Log.w("BleClientManager", "WATCHDOG TIMEOUT! No data received for 5s. Triggering disconnection...")
+            _connectionState.value = BleClientConnectionState.Disconnected
+            disconnect()
+        }
+    }
+
+    private fun stopWatchdog() {
+        Log.d("BleClientManager", "Watchdog STOPPED")
+        watchdogJob?.cancel()
+        watchdogJob = null
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun readInitialValues(gatt: BluetoothGatt?) {
+        val service = gatt?.getService(GattServiceConstants.SIMULATOR_SERVICE_UUID)
+        
+        // Read Name first
+        val nameChar = service?.getCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID)
+        if (nameChar != null) {
+            Log.d("BleClientManager", "Reading initial Name...")
+            gatt.readCharacteristic(nameChar)
+        }
+        
+        // Note: In some Android versions, you should wait for the first read to finish 
+        // before starting the second one. However, most modern ones queue them.
+        // We'll read status too.
+        val statusChar = service?.getCharacteristic(GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID)
+        if (statusChar != null) {
+            Log.d("BleClientManager", "Reading initial Status...")
+            gatt.readCharacteristic(statusChar)
+        }
     }
 
     @SuppressLint("MissingPermission")

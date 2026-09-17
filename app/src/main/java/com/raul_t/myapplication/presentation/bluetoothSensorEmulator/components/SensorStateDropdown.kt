@@ -37,6 +37,7 @@ fun SensorStateDropdown(
         SensorStatus.Healthy -> stringResource(R.string.status_healthy)
         SensorStatus.Damaged -> stringResource(R.string.status_damaged)
         SensorStatus.Offline -> stringResource(R.string.status_offline)
+        SensorStatus.Disconnected -> stringResource(R.string.status_disconnected)
     }
 
     Column(horizontalAlignment = Alignment.Start) {

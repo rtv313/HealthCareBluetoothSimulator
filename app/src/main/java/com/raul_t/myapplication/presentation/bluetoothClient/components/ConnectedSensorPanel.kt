@@ -21,14 +21,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.raul_t.myapplication.R
 import com.raul_t.myapplication.domain.model.SensorStatus
-import com.raul_t.myapplication.domain.model.DiscoveredBluetoothDevice
 import com.raul_t.myapplication.presentation.heart.components.BpmDisplay
 import com.raul_t.myapplication.ui.theme.LightSuccessGreen
 import com.raul_t.myapplication.ui.theme.SuccessGreen
 
 @Composable
 fun ConnectedSensorPanel(
-    connectedDevice: DiscoveredBluetoothDevice,
     mockBpm: Int,
     mockStatus: SensorStatus,
     mockName: String,
@@ -56,7 +54,10 @@ fun ConnectedSensorPanel(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = mockName.ifBlank { connectedDevice.name },
+                        text = when (mockName) {
+                            "Connecting...", "Server Stopped" -> mockName
+                            else -> mockName.ifBlank { stringResource(R.string.ble_default_device_name) }
+                        },
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -72,9 +73,14 @@ fun ConnectedSensorPanel(
                             SensorStatus.Healthy -> stringResource(R.string.status_healthy)
                             SensorStatus.Damaged -> stringResource(R.string.status_damaged)
                             SensorStatus.Offline -> stringResource(R.string.status_offline)
+                            SensorStatus.Disconnected -> stringResource(R.string.status_disconnected)
                         },
                         fontWeight = FontWeight.Bold,
-                        color = if (mockStatus == SensorStatus.Healthy) SuccessGreen else MaterialTheme.colorScheme.error,
+                        color = when (mockStatus) {
+                            SensorStatus.Healthy -> SuccessGreen
+                            SensorStatus.Disconnected -> MaterialTheme.colorScheme.secondary
+                            else -> MaterialTheme.colorScheme.error
+                        },
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
