@@ -10,9 +10,18 @@ val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
-// Health Simulator Colors
+// Health Simulator Greens
 val DarkGrey = Color(0xFF252525)
+val Green80 = Color(0xFFA5D6A7)
+val GreenGrey80 = Color(0xFFC8E6C9)
+val LightGreen80 = Color(0xFFE8F5E9)
+
+val Green40 = Color(0xFF4CAF50)
+val GreenGrey40 = Color(0xFF81C784)
+val LightGreen40 = Color(0xFFC8E6C9)
+
 val SuccessGreen = Color(0xFF2E7D32)
+val DarkSuccessGreen = Color(0xFF1B5E20)
 val LightSuccessGreen = Color(0xFFE8F5E9)
 val HeartRed = Color(0xFFFF0000)
 val BlackBackground = Color(0xFF121212)

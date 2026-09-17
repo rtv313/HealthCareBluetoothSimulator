@@ -5,7 +5,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,7 +23,6 @@ import com.raul_t.myapplication.navigation.Screen
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.SensorEmitterScreen
 import com.raul_t.myapplication.presentation.heart.HeartRateScreen
 import com.raul_t.myapplication.presentation.bluetoothClient.BluetoothClientScreen
-import com.raul_t.myapplication.ui.theme.LightSuccessGreen
 import com.raul_t.myapplication.ui.theme.SuccessGreen
 
 @Composable
@@ -33,15 +31,13 @@ fun MainScreen() {
     val screens = listOf(
         Screen.HeartRate,
         Screen.BluetoothEmitter,
-        Screen.ClientSimulator
+        Screen.ClientSimulator,
     )
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(
-                containerColor = LightSuccessGreen
-            ) {
+            NavigationBar {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
 
@@ -62,13 +58,6 @@ fun MainScreen() {
                             )
                         },
                         selected = selected,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = SuccessGreen,
-                            selectedTextColor = SuccessGreen,
-                            indicatorColor = LightSuccessGreen.copy(alpha = 0.4f),
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
                         onClick = {
                             navController.navigate(screen.route) {
                                 // Pop up to the start destination of the graph to
@@ -88,7 +77,8 @@ fun MainScreen() {
                 }
             }
         }
-    ) { innerPadding ->
+    )
+{ innerPadding ->
         NavHost(
             navController = navController,
             startDestination = Screen.HeartRate.route,
