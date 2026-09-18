@@ -37,6 +37,10 @@ class BleConnectionRepositoryImpl @Inject constructor(
         dataSource.connect(address)
     }
 
+    override fun validatePin(pin: String) {
+        dataSource.validatePin(pin)
+    }
+
     override fun disconnect() {
         dataSource.disconnect()
     }

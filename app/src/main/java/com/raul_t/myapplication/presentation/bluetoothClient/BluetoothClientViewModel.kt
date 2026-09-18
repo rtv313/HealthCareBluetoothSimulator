@@ -25,7 +25,8 @@ class BluetoothClientViewModel @Inject constructor(
     private val observeReceivedHeartRateUseCase: ObserveReceivedHeartRateUseCase,
     private val observeReceivedSensorStatusUseCase: ObserveReceivedSensorStatusUseCase,
     private val observeReceivedSensorNameUseCase: ObserveReceivedSensorNameUseCase,
-    private val permissionChecker: PermissionChecker
+    private val permissionChecker: PermissionChecker,
+    private val validatePinUseCase: ValidatePinUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BluetoothClientUiState())
@@ -57,25 +58,49 @@ class BluetoothClientViewModel @Inject constructor(
                             )
                         }
                     }
-                    is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connected -> {
-                        // Immediate release from "Connecting..." state.
-                        // We use the scan name as a fallback until the GATT read finishes.
+                    is com.raul_t.myapplication.ble_connect.BleClientConnectionState.WaitingForPin -> {
                         _uiState.update { 
                             it.copy(
-                                mockName = it.connectedDevice?.name ?: "Health Sensor"
+                                isWaitingForPin = true,
+                                pinErrorMessage = null
+                            )
+                        }
+                    }
+                    is com.raul_t.myapplication.ble_connect.BleClientConnectionState.InvalidPin -> {
+                        _uiState.update { 
+                            it.copy(
+                                isWaitingForPin = true,
+                                pinErrorMessage = "Wrong PIN"
+                            )
+                        }
+                    }
+                    is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connected -> {
+                        _uiState.update { 
+                            it.copy(
+                                mockName = it.connectedDevice?.name ?: "Health Sensor",
+                                isWaitingForPin = false,
+                                pinErrorMessage = null
                             )
                         }
                     }
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Disconnected,
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Error -> {
-                        // Only show "Server Stopped" if we were previously trying to stay connected
                         if (_uiState.value.connectedDevice != null) {
                             Log.w("BluetoothClientVM", "COMMUNICATION LOST: Setting UI to Server Stopped.")
                             _uiState.update { 
                                 it.copy(
                                     mockName = "Server Stopped",
                                     mockBpm = -1,
-                                    mockStatus = com.raul_t.myapplication.domain.model.SensorStatus.Disconnected
+                                    mockStatus = com.raul_t.myapplication.domain.model.SensorStatus.Disconnected,
+                                    isWaitingForPin = false,
+                                    pinErrorMessage = null
+                                )
+                            }
+                        } else {
+                            _uiState.update { 
+                                it.copy(
+                                    isWaitingForPin = false,
+                                    pinErrorMessage = null
                                 )
                             }
                         }
@@ -169,6 +194,20 @@ class BluetoothClientViewModel @Inject constructor(
     fun disconnect() {
         disconnectFromDeviceUseCase()
         _uiState.update { it.copy(connectedDevice = null) }
+    }
+
+    fun enterPin(pin: String) {
+        validatePinUseCase(pin)
+    }
+
+    fun cancelPinDialog() {
+        disconnect()
+        _uiState.update { 
+            it.copy(
+                isWaitingForPin = false,
+                pinErrorMessage = null
+            )
+        }
     }
 
     override fun onCleared() {

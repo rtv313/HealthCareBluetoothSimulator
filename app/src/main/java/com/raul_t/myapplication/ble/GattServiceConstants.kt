@@ -23,4 +23,7 @@ object GattServiceConstants {
 
     // Sensor Name Characteristic (Custom)
     val SENSOR_NAME_CHARACTERISTIC_UUID: UUID = UUID.fromString("0000ff04-0000-1000-8000-00805f9b34fb")
+
+    // PIN Required Status Characteristic (Custom)
+    val PIN_REQUIRED_CHARACTERISTIC_UUID: UUID = UUID.fromString("0000ff05-0000-1000-8000-00805f9b34fb")
 }
