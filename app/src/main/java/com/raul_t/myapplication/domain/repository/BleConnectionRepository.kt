@@ -18,5 +18,6 @@ interface BleConnectionRepository {
     fun clearDiscoveredDevices()
 
     fun connect(address: String)
+    fun validatePin(pin: String)
     fun disconnect()
 }

@@ -104,6 +104,20 @@ fun BluetoothClientScreen(
             )
         }
 
+        if (uiState.isWaitingForPin) {
+            com.raul_t.myapplication.presentation.bluetoothClient.components.PinEntryDialog(
+                errorMessage = uiState.pinErrorMessage,
+                onPinEntered = { pin -> viewModel.enterPin(pin) },
+                onDismiss = { viewModel.cancelPinDialog() }
+            )
+        }
+
+        if (uiState.isLoading) {
+            com.raul_t.myapplication.presentation.bluetoothClient.components.LoadingConnectionDialog(
+                onDismiss = { viewModel.cancelPinDialog() }
+            )
+        }
+
         // Component 3: Observation Data Summary Panel
         if (uiState.connectedDevice != null) {
             Spacer(modifier = Modifier.height(16.dp))

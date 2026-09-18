@@ -11,5 +11,6 @@ interface BleClientManager {
     val sensorName: SharedFlow<String>
 
     fun connect(address: String)
+    fun validatePin(pin: String)
     fun disconnect()
 }

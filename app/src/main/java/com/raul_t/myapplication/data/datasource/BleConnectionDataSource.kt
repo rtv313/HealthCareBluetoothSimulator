@@ -37,6 +37,10 @@ class BleConnectionDataSource @Inject constructor(
         bleClientManager.connect(address)
     }
 
+    fun validatePin(pin: String) {
+        bleClientManager.validatePin(pin)
+    }
+
     fun disconnect() {
         bleClientManager.disconnect()
     }

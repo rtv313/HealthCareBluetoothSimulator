@@ -110,6 +110,14 @@ class BleManagerImpl @Inject constructor(
         override fun onCharacteristicReadRequest(device: BluetoothDevice?, requestId: Int, offset: Int, characteristic: BluetoothGattCharacteristic?) {
             Log.d("BleManager", "Read request for ${characteristic?.uuid}")
             if (device != null) {
+                val uuid = characteristic?.uuid
+                if (isPinEnabled && uuid != GattServiceConstants.PIN_REQUIRED_CHARACTERISTIC_UUID && uuid != GattServiceConstants.PIN_VALIDATION_CHARACTERISTIC_UUID) {
+                    if (!authenticatedDevices.contains(device.address)) {
+                        Log.w("BleManager", "Read request DENIED for ${device.address} - Not Authenticated")
+                        bluetoothGattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, offset, byteArrayOf())
+                        return
+                    }
+                }
                 val value = characteristic?.value ?: byteArrayOf()
                 bluetoothGattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value)
             }
@@ -313,7 +321,7 @@ class BleManagerImpl @Inject constructor(
         when (serviceAdditionIndex) {
             0 -> {
                 val hrService = BluetoothGattService(GattServiceConstants.HEART_RATE_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-                val hrChar = BluetoothGattCharacteristic(GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_NOTIFY, if (isPinEnabledForServices) BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED else BluetoothGattCharacteristic.PERMISSION_READ)
+                val hrChar = BluetoothGattCharacteristic(GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_READ)
                 hrChar.addDescriptor(BluetoothGattDescriptor(GattServiceConstants.CCCD_UUID, BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE))
                 heartRateCharacteristic = hrChar
                 hrService.addCharacteristic(hrChar)
@@ -323,13 +331,13 @@ class BleManagerImpl @Inject constructor(
                 val metaService = BluetoothGattService(GattServiceConstants.SIMULATOR_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
                 
                 // Status Characteristic
-                val sChar = BluetoothGattCharacteristic(GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY, if (isPinEnabledForServices) BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED else BluetoothGattCharacteristic.PERMISSION_READ)
+                val sChar = BluetoothGattCharacteristic(GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_READ)
                 sChar.addDescriptor(BluetoothGattDescriptor(GattServiceConstants.CCCD_UUID, BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE))
                 statusCharacteristic = sChar
                 metaService.addCharacteristic(sChar)
                 
                 // Name Characteristic
-                val nChar = BluetoothGattCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY, if (isPinEnabledForServices) BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED else BluetoothGattCharacteristic.PERMISSION_READ)
+                val nChar = BluetoothGattCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_READ)
                 nChar.addDescriptor(BluetoothGattDescriptor(GattServiceConstants.CCCD_UUID, BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE))
                 
                 // Initialize with current name
@@ -342,6 +350,14 @@ class BleManagerImpl @Inject constructor(
                 metaService.addCharacteristic(nChar)
                 
                 metaService.addCharacteristic(BluetoothGattCharacteristic(GattServiceConstants.PIN_VALIDATION_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_WRITE, BluetoothGattCharacteristic.PERMISSION_WRITE))
+
+                // PIN Required Characteristic
+                val pinReqChar = BluetoothGattCharacteristic(GattServiceConstants.PIN_REQUIRED_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_READ, BluetoothGattCharacteristic.PERMISSION_READ)
+                val pinRequiredValue = if (isPinEnabledForServices) byteArrayOf(0x01) else byteArrayOf(0x00)
+                @Suppress("DEPRECATION")
+                pinReqChar.value = pinRequiredValue
+                metaService.addCharacteristic(pinReqChar)
+
                 server.addService(metaService)
             }
             else -> Log.d("BleManager", "GATT table setup complete")
