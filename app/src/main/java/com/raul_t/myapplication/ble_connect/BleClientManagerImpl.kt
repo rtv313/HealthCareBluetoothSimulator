@@ -30,11 +30,18 @@ import javax.inject.Singleton
 
 /**
  * Implementation of [BleClientManager] that handles the GATT client lifecycle.
+ * Acts as the Bluetooth Central device which scans for, connects to, and handles data transfers
+ * from the Peripheral server.
  */
 @Singleton
 class BleClientManagerImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : BleClientManager {
+
+    companion object {
+        // Tag constant derived from the file name to fulfill logging refactoring requirements.
+        private const val TAG = "BleClientManagerImpl"
+    }
 
     private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
@@ -43,6 +50,7 @@ class BleClientManagerImpl @Inject constructor(
     private val _connectionState = MutableStateFlow<BleClientConnectionState>(BleClientConnectionState.Disconnected)
     override val connectionState: StateFlow<BleClientConnectionState> = _connectionState.asStateFlow()
 
+    // Replay flows preserving the most recent telemetry packets for new interface subscribers.
     private val _heartRate = MutableSharedFlow<Int>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val heartRate: SharedFlow<Int> = _heartRate.asSharedFlow()
 
@@ -56,12 +64,15 @@ class BleClientManagerImpl @Inject constructor(
     private var watchdogJob: kotlinx.coroutines.Job? = null
     private var hasRetriedConfig = false
 
+    /**
+     * Core asynchronous listener returning lower-level framework events from the Android BLE Bluetooth stack.
+     */
     private val gattCallback = object : BluetoothGattCallback() {
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
-            Log.d("BleClientManager", "onConnectionStateChange: status=$status newState=$newState (Device: ${gatt?.device?.address})")
+            Log.d(TAG, "onConnectionStateChange: status=$status newState=$newState (Device: ${gatt?.device?.address})")
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                Log.e("BleClientManager", "GATT Error detected. Status: $status. Disconnecting...")
+                Log.e(TAG, "GATT Error detected. Status: $status. Disconnecting...")
                 hasRetriedConfig = false
                 _connectionState.value = BleClientConnectionState.Error("Connection failed with status: $status")
                 disconnect()
@@ -70,75 +81,74 @@ class BleClientManagerImpl @Inject constructor(
 
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 hasRetriedConfig = false
-                Log.i("BleClientManager", "CONNECTED to GATT. Discovering services...")
-                gatt?.discoverServices()
+                Log.i(TAG, "CONNECTED to GATT. Discovering services...")
+                gatt?.discoverServices() // Discover characteristics offered by the peripheral.
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                Log.w("BleClientManager", "STATE_DISCONNECTED received from hardware.")
+                Log.w(TAG, "STATE_DISCONNECTED received from hardware.")
                 hasRetriedConfig = false
                 stopWatchdog()
                 _connectionState.value = BleClientConnectionState.Disconnected
-                // Note: We don't call disconnect() here because the system already disconnected us.
-                // We just clean up our local reference if needed in disconnect() logic.
             }
         }
 
         @SuppressLint("MissingPermission")
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.i("BleClientManager", "Services DISCOVERED. Checking if PIN is required...")
+                Log.i(TAG, "Services DISCOVERED. Checking if PIN is required...")
                 scope.launch {
                     kotlinx.coroutines.delay(GATT_SETTLE_DELAY_MS)
-                    checkIfPinRequired(gatt)
+                    checkIfPinRequired(gatt) // Assess secure security status first before streaming.
                 }
             } else {
-                Log.e("BleClientManager", "Service discovery FAILED: status $status")
+                Log.e(TAG, "Service discovery FAILED: status $status")
             }
         }
 
         @SuppressLint("MissingPermission")
         override fun onDescriptorWrite(gatt: BluetoothGatt?, descriptor: BluetoothGattDescriptor?, status: Int) {
             val charUuid = descriptor?.characteristic?.uuid
-            Log.d("BleClientManager", "onDescriptorWrite: desc=${descriptor?.uuid} char=$charUuid status=$status")
+            Log.d(TAG, "onDescriptorWrite: desc=${descriptor?.uuid} char=$charUuid status=$status")
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                // Sequentially chain configuration descriptors (CCCD) writes to safely initialize multiple notifications.
                 if (descriptor?.uuid == GattServiceConstants.CCCD_UUID) {
                     when (charUuid) {
                         GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID -> {
-                            Log.i("BleClientManager", "HR notifications ENABLED. Next: Status...")
+                            Log.i(TAG, "HR notifications ENABLED. Next: Status...")
                             enableStatusNotifications(gatt)
                         }
                         GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID -> {
-                            Log.i("BleClientManager", "Status notifications ENABLED. Next: Name...")
+                            Log.i(TAG, "Status notifications ENABLED. Next: Name...")
                             enableNameNotifications(gatt)
                         }
                         GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID -> {
-                            Log.i("BleClientManager", "Name notifications ENABLED. Configuration complete. Fetching initial data...")
+                            Log.i(TAG, "Name notifications ENABLED. Configuration complete. Fetching initial data...")
                             readInitialValues(gatt)
                         }
                     }
                 }
             } else if (status == GATT_ERROR_STALE && !hasRetriedConfig) {
-                Log.w("BleClientManager", "Descriptor write 133 ERROR. Retrying HR config in 500ms...")
+                Log.w(TAG, "Descriptor write 133 ERROR. Retrying HR config in 500ms...")
                 hasRetriedConfig = true
                 scope.launch {
                     kotlinx.coroutines.delay(GATT_RETRY_DELAY_MS)
                     enableHeartRateNotifications(gatt)
                 }
             } else {
-                Log.e("BleClientManager", "Descriptor write FAILED: status $status")
+                Log.e(TAG, "Descriptor write FAILED: status $status")
             }
         }
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
-            Log.v("BleClientManager", "onCharacteristicChanged (Modern API): char=${characteristic.uuid} value=${value.contentToString()}")
-            resetWatchdog()
+            Log.v(TAG, "onCharacteristicChanged (Modern API): char=${characteristic.uuid} value=${value.contentToString()}")
+            resetWatchdog() // Keep connection open as telemetry arrives.
             processCharacteristicUpdate(characteristic, value)
         }
 
         @Suppress("DEPRECATION")
         override fun onCharacteristicChanged(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?) {
             if (characteristic != null) {
-                Log.v("BleClientManager", "onCharacteristicChanged (Legacy API): char=${characteristic.uuid}")
+                Log.v(TAG, "onCharacteristicChanged (Legacy API): char=${characteristic.uuid}")
                 resetWatchdog()
                 processCharacteristicUpdate(characteristic, characteristic.value)
             }
@@ -149,7 +159,7 @@ class BleClientManagerImpl @Inject constructor(
                 resetWatchdog()
                 if (characteristic.uuid == GattServiceConstants.PIN_REQUIRED_CHARACTERISTIC_UUID) {
                     val isRequired = value.firstOrNull() == 0x01.toByte()
-                    Log.d("BleClientManager", "PIN Required read result (modern): $isRequired")
+                    Log.d(TAG, "PIN Required read result (modern): $isRequired")
                     if (isRequired) {
                         _connectionState.value = BleClientConnectionState.WaitingForPin
                     } else {
@@ -169,7 +179,7 @@ class BleClientManagerImpl @Inject constructor(
                 resetWatchdog()
                 if (characteristic.uuid == GattServiceConstants.PIN_REQUIRED_CHARACTERISTIC_UUID) {
                     val isRequired = characteristic.value?.firstOrNull() == 0x01.toByte()
-                    Log.d("BleClientManager", "PIN Required read result (legacy): $isRequired")
+                    Log.d(TAG, "PIN Required read result (legacy): $isRequired")
                     if (isRequired) {
                         _connectionState.value = BleClientConnectionState.WaitingForPin
                     } else {
@@ -192,39 +202,45 @@ class BleClientManagerImpl @Inject constructor(
 
         private fun handlePinValidationResult(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
             val uuid = characteristic.uuid
-            Log.d("BleClientManager", "onCharacteristicWrite: char=$uuid status=$status")
+            Log.d(TAG, "onCharacteristicWrite: char=$uuid status=$status")
             if (uuid == GattServiceConstants.PIN_VALIDATION_CHARACTERISTIC_UUID) {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
-                    Log.i("BleClientManager", "PIN validated SUCCESSFULLY. Proceeding to notifications...")
+                    Log.i(TAG, "PIN validated SUCCESSFULLY. Proceeding to notifications...")
                     _connectionState.value = BleClientConnectionState.Connected
                     enableHeartRateNotifications(gatt)
                     startWatchdog()
                 } else {
-                    Log.w("BleClientManager", "PIN validation FAILED with status $status")
+                    Log.w(TAG, "PIN validation FAILED with status $status")
                     _connectionState.value = BleClientConnectionState.InvalidPin
                 }
             }
         }
     }
 
+    /**
+     * Reads security configurations from peripheral attributes to decide if a PIN entry flow is required.
+     */
     @SuppressLint("MissingPermission")
     private fun checkIfPinRequired(gatt: BluetoothGatt?) {
         val service = gatt?.getService(GattServiceConstants.SIMULATOR_SERVICE_UUID)
         val pinReqChar = service?.getCharacteristic(GattServiceConstants.PIN_REQUIRED_CHARACTERISTIC_UUID)
         if (pinReqChar != null) {
-            Log.d("BleClientManager", "Reading PIN required characteristic...")
+            Log.d(TAG, "Reading PIN required characteristic...")
             gatt.readCharacteristic(pinReqChar)
         } else {
-            Log.w("BleClientManager", "PIN required characteristic not found, assuming PIN not required.")
+            Log.w(TAG, "PIN required characteristic not found, assuming PIN not required.")
             _connectionState.value = BleClientConnectionState.Connected
             enableHeartRateNotifications(gatt)
             startWatchdog()
         }
     }
 
+    /**
+     * De-serializes incoming characteristic byte arrays back into typed system model representations.
+     */
     private fun processCharacteristicUpdate(characteristic: BluetoothGattCharacteristic, value: ByteArray?) {
         if (value == null) {
-            Log.w("BleClientManager", "Received NULL value for char ${characteristic.uuid}")
+            Log.w(TAG, "Received NULL value for char ${characteristic.uuid}")
             return
         }
 
@@ -232,38 +248,41 @@ class BleClientManagerImpl @Inject constructor(
             GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID -> {
                 if (value.size >= MIN_HEART_RATE_PACKET_SIZE) {
                     val bpm = value[HEART_RATE_VALUE_INDEX].toInt() and 0xFF
-                    Log.d("BleClientManager", "RECEIVED BPM: $bpm")
+                    Log.d(TAG, "RECEIVED BPM: $bpm")
                     scope.launch { _heartRate.emit(bpm) }
                 } else {
-                    Log.w("BleClientManager", "HR packet too small: ${value.size} bytes")
+                    Log.w(TAG, "HR packet too small: ${value.size} bytes")
                 }
             }
             GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID -> {
                 val statusStr = String(value, Charsets.UTF_8)
-                Log.d("BleClientManager", "RECEIVED Status: $statusStr")
+                Log.d(TAG, "RECEIVED Status: $statusStr")
                 val status = try {
                     SensorStatus.valueOf(statusStr)
                 } catch (e: Exception) {
-                    Log.e("BleClientManager", "Failed to parse sensor status: $statusStr")
+                    Log.e(TAG, "Failed to parse sensor status: $statusStr")
                     SensorStatus.Healthy
                 }
                 scope.launch { _sensorStatus.emit(status) }
             }
             GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID -> {
                 val name = String(value, Charsets.UTF_8)
-                Log.d("BleClientManager", "RECEIVED Name: $name")
+                Log.d(TAG, "RECEIVED Name: $name")
                 scope.launch { _sensorName.emit(name) }
             }
         }
     }
 
+    /**
+     * Submits a payload string to the peripheral's secret attribute to gain data stream validation clearances.
+     */
     @SuppressLint("MissingPermission")
     override fun validatePin(pin: String) {
         val gatt = bluetoothGatt ?: return
         val service = gatt.getService(GattServiceConstants.SIMULATOR_SERVICE_UUID)
         val pinChar = service?.getCharacteristic(GattServiceConstants.PIN_VALIDATION_CHARACTERISTIC_UUID)
         if (pinChar != null) {
-            Log.i("BleClientManager", "Writing PIN for validation: $pin")
+            Log.i(TAG, "Writing PIN for validation: $pin")
             val bytes = pin.toByteArray(Charsets.UTF_8)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 gatt.writeCharacteristic(pinChar, bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
@@ -274,7 +293,7 @@ class BleClientManagerImpl @Inject constructor(
                 gatt.writeCharacteristic(pinChar)
             }
         } else {
-            Log.e("BleClientManager", "PIN validation characteristic not found!")
+            Log.e(TAG, "PIN validation characteristic not found!")
         }
     }
 
@@ -290,13 +309,13 @@ class BleClientManagerImpl @Inject constructor(
             return
         }
         _connectionState.value = BleClientConnectionState.Connecting
-        Log.i("BleClientManager", "Initiating connection to $address")
+        Log.i(TAG, "Initiating connection to $address")
         bluetoothGatt = device.connectGatt(context, false, gattCallback)
     }
 
     @SuppressLint("MissingPermission")
     override fun disconnect() {
-        Log.i("BleClientManager", "Disconnecting GATT")
+        Log.i(TAG, "Disconnecting GATT")
         stopWatchdog()
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
@@ -305,7 +324,7 @@ class BleClientManagerImpl @Inject constructor(
     }
 
     private fun startWatchdog() {
-        Log.d("BleClientManager", "Watchdog STARTED ($WATCHDOG_TIMEOUT_MS ms timeout)")
+        Log.d(TAG, "Watchdog STARTED ($WATCHDOG_TIMEOUT_MS ms timeout)")
         resetWatchdog()
     }
 
@@ -313,14 +332,14 @@ class BleClientManagerImpl @Inject constructor(
         watchdogJob?.cancel()
         watchdogJob = scope.launch {
             kotlinx.coroutines.delay(WATCHDOG_TIMEOUT_MS)
-            Log.w("BleClientManager", "WATCHDOG TIMEOUT! No data received for ${WATCHDOG_TIMEOUT_MS/1000}s. Triggering disconnection...")
+            Log.w(TAG, "WATCHDOG TIMEOUT! No data received for ${WATCHDOG_TIMEOUT_MS/1000}s. Triggering disconnection...")
             _connectionState.value = BleClientConnectionState.Disconnected
             disconnect()
         }
     }
 
     private fun stopWatchdog() {
-        Log.d("BleClientManager", "Watchdog STOPPED")
+        Log.d(TAG, "Watchdog STOPPED")
         watchdogJob?.cancel()
         watchdogJob = null
     }
@@ -329,19 +348,15 @@ class BleClientManagerImpl @Inject constructor(
     private fun readInitialValues(gatt: BluetoothGatt?) {
         val service = gatt?.getService(GattServiceConstants.SIMULATOR_SERVICE_UUID)
         
-        // Read Name first
         val nameChar = service?.getCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID)
         if (nameChar != null) {
-            Log.d("BleClientManager", "Reading initial Name...")
+            Log.d(TAG, "Reading initial Name...")
             gatt.readCharacteristic(nameChar)
         }
         
-        // Note: In some Android versions, you should wait for the first read to finish 
-        // before starting the second one. However, most modern ones queue them.
-        // We'll read status too.
         val statusChar = service?.getCharacteristic(GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID)
         if (statusChar != null) {
-            Log.d("BleClientManager", "Reading initial Status...")
+            Log.d(TAG, "Reading initial Status...")
             gatt.readCharacteristic(statusChar)
         }
     }
@@ -352,11 +367,11 @@ class BleClientManagerImpl @Inject constructor(
         val char = service?.getCharacteristic(GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID)
         if (char != null) {
             val success = gatt.setCharacteristicNotification(char, true)
-            Log.d("BleClientManager", "setCharacteristicNotification (HR) result: $success")
+            Log.d(TAG, "setCharacteristicNotification (HR) result: $success")
             
             val desc = char.getDescriptor(GattServiceConstants.CCCD_UUID)
             if (desc != null) {
-                Log.d("BleClientManager", "Requesting HR notification write to CCCD")
+                Log.d(TAG, "Requesting HR notification write to CCCD")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     gatt.writeDescriptor(desc, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
                 } else {
@@ -366,10 +381,10 @@ class BleClientManagerImpl @Inject constructor(
                     gatt.writeDescriptor(desc)
                 }
             } else {
-                Log.e("BleClientManager", "HR CCCD descriptor not found!")
+                Log.e(TAG, "HR CCCD descriptor not found!")
             }
         } else {
-            Log.e("BleClientManager", "HR characteristic not found!")
+            Log.e(TAG, "HR characteristic not found!")
             enableStatusNotifications(gatt)
         }
     }
@@ -380,11 +395,11 @@ class BleClientManagerImpl @Inject constructor(
         val char = service?.getCharacteristic(GattServiceConstants.SENSOR_STATUS_CHARACTERISTIC_UUID)
         if (char != null) {
             val success = gatt.setCharacteristicNotification(char, true)
-            Log.d("BleClientManager", "setCharacteristicNotification (Status) result: $success")
+            Log.d(TAG, "setCharacteristicNotification (Status) result: $success")
             
             val desc = char.getDescriptor(GattServiceConstants.CCCD_UUID)
             if (desc != null) {
-                Log.d("BleClientManager", "Requesting Status notification write to CCCD")
+                Log.d(TAG, "Requesting Status notification write to CCCD")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     gatt.writeDescriptor(desc, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
                 } else {
@@ -394,10 +409,10 @@ class BleClientManagerImpl @Inject constructor(
                     gatt.writeDescriptor(desc)
                 }
             } else {
-                Log.e("BleClientManager", "Status CCCD descriptor not found!")
+                Log.e(TAG, "Status CCCD descriptor not found!")
             }
         } else {
-            Log.e("BleClientManager", "Status characteristic not found!")
+            Log.e(TAG, "Status characteristic not found!")
             enableNameNotifications(gatt)
         }
     }
@@ -408,11 +423,11 @@ class BleClientManagerImpl @Inject constructor(
         val char = service?.getCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID)
         if (char != null) {
             val success = gatt.setCharacteristicNotification(char, true)
-            Log.d("BleClientManager", "setCharacteristicNotification (Name) result: $success")
+            Log.d(TAG, "setCharacteristicNotification (Name) result: $success")
             
             val desc = char.getDescriptor(GattServiceConstants.CCCD_UUID)
             if (desc != null) {
-                Log.d("BleClientManager", "Requesting Name notification write to CCCD")
+                Log.d(TAG, "Requesting Name notification write to CCCD")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     gatt.writeDescriptor(desc, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
                 } else {
@@ -422,10 +437,10 @@ class BleClientManagerImpl @Inject constructor(
                     gatt.writeDescriptor(desc)
                 }
             } else {
-                Log.e("BleClientManager", "Name CCCD descriptor not found!")
+                Log.e(TAG, "Name CCCD descriptor not found!")
             }
         } else {
-            Log.e("BleClientManager", "Name characteristic not found!")
+            Log.e(TAG, "Name characteristic not found!")
         }
     }
 }
