@@ -29,6 +29,10 @@ class BluetoothClientViewModel @Inject constructor(
     private val validatePinUseCase: ValidatePinUseCase
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "BluetoothClientViewModel"
+    }
+
     private val _uiState = MutableStateFlow(BluetoothClientUiState())
     val uiState: StateFlow<BluetoothClientUiState> = _uiState.asStateFlow()
 
@@ -48,7 +52,7 @@ class BluetoothClientViewModel @Inject constructor(
         // Observe GATT connection state
         viewModelScope.launch {
             observeClientConnectionStateUseCase().collect { state ->
-                Log.d("BluetoothClientVM", "Connection State Changed: $state")
+                Log.d(TAG, "Connection State Changed: $state")
                 _uiState.update { it.copy(connectionState = state) }
                 
                 when (state) {
@@ -56,7 +60,7 @@ class BluetoothClientViewModel @Inject constructor(
                         connectionTimeoutJob?.cancel()
                         connectionTimeoutJob = viewModelScope.launch {
                             kotlinx.coroutines.delay(10000L) // 10 second guardrail timeout
-                            Log.w("BluetoothClientVM", "Connection guardrail timeout triggered. Dismissing loading and disconnecting.")
+                            Log.w(TAG, "Connection guardrail timeout triggered. Dismissing loading and disconnecting.")
                             disconnect()
                         }
                         _uiState.update { 
@@ -102,7 +106,7 @@ class BluetoothClientViewModel @Inject constructor(
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Error -> {
                         connectionTimeoutJob?.cancel()
                         if (_uiState.value.connectedDevice != null) {
-                            Log.w("BluetoothClientVM", "COMMUNICATION LOST: Setting UI to Server Stopped.")
+                            Log.w(TAG, "COMMUNICATION LOST: Setting UI to Server Stopped.")
                             _uiState.update { 
                                 it.copy(
                                     mockName = "Server Stopped",
@@ -131,7 +135,7 @@ class BluetoothClientViewModel @Inject constructor(
         viewModelScope.launch {
             observeReceivedHeartRateUseCase().collect { bpm ->
                 if (_uiState.value.connectionState is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connected) {
-                    Log.v("BluetoothClientVM", "Received Heart Rate: $bpm")
+                    Log.v(TAG, "Received Heart Rate: $bpm")
                     _uiState.update { it.copy(mockBpm = bpm) }
                 }
             }
@@ -141,7 +145,7 @@ class BluetoothClientViewModel @Inject constructor(
         viewModelScope.launch {
             observeReceivedSensorStatusUseCase().collect { status ->
                 if (_uiState.value.connectionState is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connected) {
-                    Log.v("BluetoothClientVM", "Received Sensor Status: $status")
+                    Log.v(TAG, "Received Sensor Status: $status")
                     _uiState.update { it.copy(mockStatus = status) }
                 }
             }
@@ -151,7 +155,7 @@ class BluetoothClientViewModel @Inject constructor(
         viewModelScope.launch {
             observeReceivedSensorNameUseCase().collect { name ->
                 if (_uiState.value.connectionState is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connected) {
-                    Log.v("BluetoothClientVM", "Received Sensor Name: $name")
+                    Log.v(TAG, "Received Sensor Name: $name")
                     _uiState.update { it.copy(mockName = name) }
                 }
             }

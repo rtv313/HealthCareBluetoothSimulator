@@ -23,6 +23,8 @@ import javax.inject.Singleton
 
 /**
  * Implementation of [BleManager] that handles the GATT server (Emulator) lifecycle.
+ * This class acts as a Bluetooth Low Energy Peripheral. It creates services,
+ * answers central client read/write inquiries, and handles BLE advertising packets.
  */
 @Singleton
 class BleManagerImpl @Inject constructor(
@@ -30,12 +32,18 @@ class BleManagerImpl @Inject constructor(
     private val sensorDataSource: FakeSensorDataSource
 ) : BleManager {
 
+    companion object {
+        // Tag constant derived from the file name to fulfill logging refactoring requirements.
+        private const val TAG = "BleManagerImpl"
+    }
+
     private val bluetoothManager: BluetoothManager? =
         context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager?.adapter
     private var bluetoothLeAdvertiser: BluetoothLeAdvertiser? = null
     private var bluetoothGattServer: BluetoothGattServer? = null
 
+    // References to exposed GATT attributes required to update state parameters dynamically.
     private var heartRateCharacteristic: BluetoothGattCharacteristic? = null
     private var statusCharacteristic: BluetoothGattCharacteristic? = null
     private var sensorNameCharacteristic: BluetoothGattCharacteristic? = null
@@ -43,7 +51,7 @@ class BleManagerImpl @Inject constructor(
     private var connectedDevice: BluetoothDevice? = null
     private val authenticatedDevices = mutableSetOf<String>()
 
-    // Tracks notification subscriptions to avoid redundant updates.
+    // Tracks notification subscriptions to avoid redundant updates. Maps address -> Set of active Char UUIDs.
     private val notificationSubscriptions = mutableMapOf<String, MutableSet<java.util.UUID>>()
 
     private var isPinEnabled: Boolean = false
@@ -54,38 +62,46 @@ class BleManagerImpl @Inject constructor(
     private var isPinEnabledForServices: Boolean = false
     private var currentName: String? = null
 
+    /**
+     * Callback handling the advertisement loop lifecycle events.
+     * Advertising enables Central clients to discover this Peripheral's presence.
+     */
     private val advertiseCallback = object : AdvertiseCallback() {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
             super.onStartSuccess(settingsInEffect)
-            Log.i("BleManager", "Advertising started SUCCESSFULLY")
+            Log.i(TAG, "Advertising started SUCCESSFULLY")
             _connectionState.value = BleConnectionState.Advertising
         }
 
         override fun onStartFailure(errorCode: Int) {
             super.onStartFailure(errorCode)
             val errorMessage = "Advertising FAILED: error $errorCode"
-            Log.e("BleManager", errorMessage)
+            Log.e(TAG, errorMessage)
             _connectionState.value = BleConnectionState.Error(errorMessage)
         }
     }
 
+    /**
+     * Fundamental callback responding to incoming transactional queries from connected Central clients.
+     */
     private val gattServerCallback = object : BluetoothGattServerCallback() {
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(device: BluetoothDevice?, status: Int, newState: Int) {
             super.onConnectionStateChange(device, status, newState)
-            Log.d("BleManager", "onConnectionStateChange: ${device?.address} status=$status new=$newState")
+            Log.d(TAG, "onConnectionStateChange: ${device?.address} status=$status new=$newState")
             
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                Log.i("BleManager", "Device CONNECTED: ${device?.address}")
+                Log.i(TAG, "Device CONNECTED: ${device?.address}")
                 connectedDevice = device
                 _connectionState.value = BleConnectionState.Connected(device?.name ?: context.getString(R.string.ble_unknown_device))
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                Log.i("BleManager", "Device DISCONNECTED: ${device?.address}")
+                Log.i(TAG, "Device DISCONNECTED: ${device?.address}")
                 device?.address?.let { 
                     authenticatedDevices.remove(it)
                     notificationSubscriptions.remove(it)
                 }
                 connectedDevice = null
+                // Resume advertising if the advertiser object is active.
                 if (bluetoothLeAdvertiser != null) {
                     _connectionState.value = BleConnectionState.Advertising
                 } else {
@@ -98,22 +114,23 @@ class BleManagerImpl @Inject constructor(
         override fun onServiceAdded(status: Int, service: BluetoothGattService?) {
             super.onServiceAdded(status, service)
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BleManager", "Service added: ${service?.uuid}")
+                Log.d(TAG, "Service added: ${service?.uuid}")
                 serviceAdditionIndex++
-                addNextService()
+                addNextService() // Chain service additions sequentially to avoid firmware state anomalies.
             } else {
-                Log.e("BleManager", "Failed to add service: status $status")
+                Log.e(TAG, "Failed to add service: status $status")
             }
         }
 
         @SuppressLint("MissingPermission")
         override fun onCharacteristicReadRequest(device: BluetoothDevice?, requestId: Int, offset: Int, characteristic: BluetoothGattCharacteristic?) {
-            Log.d("BleManager", "Read request for ${characteristic?.uuid}")
+            Log.d(TAG, "Read request for ${characteristic?.uuid}")
             if (device != null) {
                 val uuid = characteristic?.uuid
+                // Custom secure guardrail: block sensitive reads if custom PIN pairing hasn't occurred.
                 if (isPinEnabled && uuid != GattServiceConstants.PIN_REQUIRED_CHARACTERISTIC_UUID && uuid != GattServiceConstants.PIN_VALIDATION_CHARACTERISTIC_UUID) {
                     if (!authenticatedDevices.contains(device.address)) {
-                        Log.w("BleManager", "Read request DENIED for ${device.address} - Not Authenticated")
+                        Log.w(TAG, "Read request DENIED for ${device.address} - Not Authenticated")
                         bluetoothGattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, offset, byteArrayOf())
                         return
                     }
@@ -125,15 +142,16 @@ class BleManagerImpl @Inject constructor(
 
         @SuppressLint("MissingPermission")
         override fun onCharacteristicWriteRequest(device: BluetoothDevice?, requestId: Int, characteristic: BluetoothGattCharacteristic?, preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray?) {
-            Log.d("BleManager", "Write request for ${characteristic?.uuid}")
+            Log.d(TAG, "Write request for ${characteristic?.uuid}")
             if (characteristic?.uuid == GattServiceConstants.PIN_VALIDATION_CHARACTERISTIC_UUID && value != null) {
                 val writtenPin = String(value, Charsets.UTF_8)
                 val expectedPin = sensorDataSource.sensorState.value.pin.toString().padStart(4, '0')
                 if (writtenPin == expectedPin && device != null) {
                     authenticatedDevices.add(device.address)
-                    Log.i("BleManager", "Device AUTHENTICATED: ${device.address}")
+                    Log.i(TAG, "Device AUTHENTICATED: ${device.address}")
                     if (responseNeeded) bluetoothGattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value)
                 } else if (device != null && responseNeeded) {
+                    Log.w(TAG, "Authentication failed for pin entry: $writtenPin")
                     bluetoothGattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, offset, value)
                 }
             } else if (responseNeeded && device != null) {
@@ -144,20 +162,21 @@ class BleManagerImpl @Inject constructor(
         @SuppressLint("MissingPermission")
         override fun onDescriptorWriteRequest(device: BluetoothDevice?, requestId: Int, descriptor: BluetoothGattDescriptor?, preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray?) {
             val charUuid = descriptor?.characteristic?.uuid
-            Log.d("BleManager", "Descriptor write request from ${device?.address}: ${descriptor?.uuid}")
+            Log.d(TAG, "Descriptor write request from ${device?.address}: ${descriptor?.uuid}")
             
+            // Handle Client Characteristic Configuration Descriptor (CCCD) additions for active telemetry tracking.
             if (descriptor?.uuid == GattServiceConstants.CCCD_UUID && charUuid != null && device != null) {
                 val isEnabling = value?.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) == true
                 if (isEnabling) {
                     notificationSubscriptions.getOrPut(device.address) { mutableSetOf() }.add(charUuid)
-                    Log.i("BleManager", "Notifications ENABLED for $charUuid on ${device.address}")
+                    Log.i(TAG, "Notifications ENABLED for $charUuid on ${device.address}")
                 } else {
                     notificationSubscriptions[device.address]?.remove(charUuid)
-                    Log.i("BleManager", "Notifications DISABLED for $charUuid on ${device.address}")
+                    Log.i(TAG, "Notifications DISABLED for $charUuid on ${device.address}")
                 }
                 if (responseNeeded) {
                     bluetoothGattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value)
-                    Log.d("BleManager", "Sent SUCCESS response for CCCD write")
+                    Log.d(TAG, "Sent SUCCESS response for CCCD write")
                 }
             } else if (responseNeeded && device != null) {
                 bluetoothGattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value)
@@ -167,29 +186,28 @@ class BleManagerImpl @Inject constructor(
 
     override fun isBluetoothEnabled(): Boolean = bluetoothAdapter?.isEnabled == true
 
+    /**
+     * Configures properties and triggers the low-energy peripheral advertising sequence.
+     */
     @SuppressLint("MissingPermission")
     override fun startAdvertising(sensor: BluetoothSensor) {
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) return
         bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser ?: return
         
-        // Hardcode the discovery name as requested
         val discoveryName = "Health Sensor"
         val nameChanged = discoveryName != currentName
         
-        // If GATT server is already running and discovery name hasn't changed, we don't need a full restart.
         if (bluetoothGattServer != null && !nameChanged) {
-            Log.d("BleManager", "GATT server already running with name '$discoveryName'. Skipping full restart.")
+            Log.d(TAG, "GATT server already running with name '$discoveryName'. Skipping full restart.")
             return
         }
 
-        // If we are already advertising, stop the old one first.
         bluetoothLeAdvertiser?.stopAdvertising(advertiseCallback)
         
         bluetoothAdapter.name = discoveryName
         currentName = discoveryName
         this.isPinEnabled = sensor.isPinEnabled
         
-        // Only open a new GATT server if one isn't already active.
         if (bluetoothGattServer == null) {
             bluetoothGattServer = bluetoothManager?.openGattServer(context, gattServerCallback)
             serviceAdditionIndex = 0
@@ -208,7 +226,7 @@ class BleManagerImpl @Inject constructor(
             .addServiceUuid(ParcelUuid(GattServiceConstants.HEART_RATE_SERVICE_UUID))
             .build()
         
-        Log.i("BleManager", "Starting advertising as: $discoveryName")
+        Log.i(TAG, "Starting advertising as: $discoveryName")
         bluetoothLeAdvertiser?.startAdvertising(settings, data, advertiseCallback)
     }
 
@@ -217,9 +235,8 @@ class BleManagerImpl @Inject constructor(
         bluetoothLeAdvertiser?.stopAdvertising(advertiseCallback)
         bluetoothLeAdvertiser = null
         
-        // Force disconnect any active client before closing
         connectedDevice?.let { device ->
-            Log.i("BleManager", "Forcefully disconnecting client: ${device.address}")
+            Log.i(TAG, "Forcefully disconnecting client: ${device.address}")
             bluetoothGattServer?.cancelConnection(device)
         }
         
@@ -235,12 +252,15 @@ class BleManagerImpl @Inject constructor(
         _connectionState.value = BleConnectionState.Idle
     }
 
+    /**
+     * Transmits raw characteristic updates asynchronously down to all authenticated subscribed collectors.
+     */
     @SuppressLint("MissingPermission")
     override fun updateHeartRate(bpm: Int) {
         val char = heartRateCharacteristic ?: return
         val device = connectedDevice ?: return
         if (notificationSubscriptions[device.address]?.contains(char.uuid) != true) {
-            Log.v("BleManager", "Skipping HR update: ${device.address} not subscribed")
+            Log.v(TAG, "Skipping HR update: ${device.address} not subscribed")
             return
         }
         if (isPinEnabled && !authenticatedDevices.contains(device.address)) return
@@ -257,9 +277,9 @@ class BleManagerImpl @Inject constructor(
         }
         
         if (success == BluetoothGatt.GATT_SUCCESS || success == true) {
-            Log.d("BleManager", "Notified HR: $bpm to ${device.address} - SUCCESS")
+            Log.d(TAG, "Notified HR: $bpm to ${device.address} - SUCCESS")
         } else {
-            Log.e("BleManager", "Notified HR: $bpm to ${device.address} - FAILED ($success)")
+            Log.e(TAG, "Notified HR: $bpm to ${device.address} - FAILED ($success)")
         }
     }
 
@@ -282,9 +302,9 @@ class BleManagerImpl @Inject constructor(
         }
         
         if (success == BluetoothGatt.GATT_SUCCESS || success == true) {
-            Log.d("BleManager", "Notified Status: ${status.name} to ${device.address} - SUCCESS")
+            Log.d(TAG, "Notified Status: ${status.name} to ${device.address} - SUCCESS")
         } else {
-            Log.e("BleManager", "Notified Status: ${status.name} to ${device.address} - FAILED ($success)")
+            Log.e(TAG, "Notified Status: ${status.name} to ${device.address} - FAILED ($success)")
         }
     }
 
@@ -309,17 +329,22 @@ class BleManagerImpl @Inject constructor(
         }
         
         if (success == BluetoothGatt.GATT_SUCCESS || success == true) {
-            Log.d("BleManager", "Notified Name: $finalName to ${device.address} - SUCCESS")
+            Log.d(TAG, "Notified Name: $finalName to ${device.address} - SUCCESS")
         } else {
-            Log.e("BleManager", "Notified Name: $finalName to ${device.address} - FAILED ($success)")
+            Log.e(TAG, "Notified Name: $finalName to ${device.address} - FAILED ($success)")
         }
     }
 
+    /**
+     * Declares and builds the local GATT Database Structure.
+     * Service creation must be asynchronous and incremental to respect peripheral chipset architectures.
+     */
     @SuppressLint("MissingPermission")
     private fun addNextService() {
         val server = bluetoothGattServer ?: return
         when (serviceAdditionIndex) {
             0 -> {
+                // Primary service detailing standard Bluetooth health sensor specifications
                 val hrService = BluetoothGattService(GattServiceConstants.HEART_RATE_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
                 val hrChar = BluetoothGattCharacteristic(GattServiceConstants.HEART_RATE_MEASUREMENT_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_READ)
                 hrChar.addDescriptor(BluetoothGattDescriptor(GattServiceConstants.CCCD_UUID, BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE))
@@ -328,6 +353,7 @@ class BleManagerImpl @Inject constructor(
                 server.addService(hrService)
             }
             1 -> {
+                // Secondary service containing simulator control metrics & authorization parameters
                 val metaService = BluetoothGattService(GattServiceConstants.SIMULATOR_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
                 
                 // Status Characteristic
@@ -340,7 +366,6 @@ class BleManagerImpl @Inject constructor(
                 val nChar = BluetoothGattCharacteristic(GattServiceConstants.SENSOR_NAME_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_READ)
                 nChar.addDescriptor(BluetoothGattDescriptor(GattServiceConstants.CCCD_UUID, BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE))
                 
-                // Initialize with current name
                 val discoveryDefault = context.getString(R.string.ble_default_device_name)
                 val currentSensorName = sensorDataSource.sensorState.value.name.ifBlank { discoveryDefault }
                 @Suppress("DEPRECATION")
@@ -349,9 +374,10 @@ class BleManagerImpl @Inject constructor(
                 sensorNameCharacteristic = nChar
                 metaService.addCharacteristic(nChar)
                 
+                // Custom attributes supporting security entry
                 metaService.addCharacteristic(BluetoothGattCharacteristic(GattServiceConstants.PIN_VALIDATION_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_WRITE, BluetoothGattCharacteristic.PERMISSION_WRITE))
 
-                // PIN Required Characteristic
+                // Flag informing client scanners whether they need to surface an authentication input modal
                 val pinReqChar = BluetoothGattCharacteristic(GattServiceConstants.PIN_REQUIRED_CHARACTERISTIC_UUID, BluetoothGattCharacteristic.PROPERTY_READ, BluetoothGattCharacteristic.PERMISSION_READ)
                 val pinRequiredValue = if (isPinEnabledForServices) byteArrayOf(0x01) else byteArrayOf(0x00)
                 @Suppress("DEPRECATION")
@@ -360,7 +386,7 @@ class BleManagerImpl @Inject constructor(
 
                 server.addService(metaService)
             }
-            else -> Log.d("BleManager", "GATT table setup complete")
+            else -> Log.d(TAG, "GATT table setup complete")
         }
     }
 }

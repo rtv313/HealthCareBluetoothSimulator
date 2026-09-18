@@ -29,6 +29,10 @@ class BleScannerManagerImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : BleScannerManager {
 
+    companion object {
+        private const val TAG = "BleScannerManagerImpl"
+    }
+
     private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
     private val bleScanner get() = bluetoothAdapter?.bluetoothLeScanner
@@ -64,7 +68,7 @@ class BleScannerManagerImpl @Inject constructor(
             val deviceAddress = device.address
             val rssi = result.rssi
 
-            Log.d("BleScannerManager", "Discovered Sensor: $deviceName [$deviceAddress] RSSI: $rssi")
+            Log.d(TAG, "Discovered Sensor: $deviceName [$deviceAddress] RSSI: $rssi")
 
             // Updating the StateFlow triggers an automatic UI refresh.
             _discoveredDevices.update { currentList ->
@@ -83,22 +87,22 @@ class BleScannerManagerImpl @Inject constructor(
 
         override fun onScanFailed(errorCode: Int) {
             super.onScanFailed(errorCode)
-            Log.e("BleScannerManager", "Scan failed with error code: $errorCode")
+            Log.e(TAG, "Scan failed with error code: $errorCode")
         }
     }
 
     @SuppressLint("MissingPermission")
     override fun startScanning() {
         if (isScanning) {
-            Log.d("BleScannerManager", "Already scanning, ignoring start request")
+            Log.d(TAG, "Already scanning, ignoring start request")
             return
         }
         if (bleScanner == null) {
-            Log.e("BleScannerManager", "Cannot start scan: bleScanner is null. Bluetooth might be OFF or adapter not available.")
+            Log.e(TAG, "Cannot start scan: bleScanner is null. Bluetooth might be OFF or adapter not available.")
             return
         }
 
-        Log.d("BleScannerManager", "Starting BLE Scan...")
+        Log.d(TAG, "Starting BLE Scan...")
 
         _discoveredDevices.value = emptyList()
         isScanning = true
@@ -113,7 +117,7 @@ class BleScannerManagerImpl @Inject constructor(
             // Scanning with null filters to see if any devices show up.
             bleScanner?.startScan(null, settings, scanCallback)
         } catch (e: Exception) {
-            Log.e("BleScannerManager", "Error starting scan", e)
+            Log.e(TAG, "Error starting scan", e)
             isScanning = false
         }
     }
@@ -123,7 +127,7 @@ class BleScannerManagerImpl @Inject constructor(
         if (!isScanning || bleScanner == null) return
 
         isScanning = false
-        Log.d("BleScannerManager", "Stopping BLE Scan...")
+        Log.d(TAG, "Stopping BLE Scan...")
         bleScanner?.stopScan(scanCallback)
         stopCleanupLoop()
     }

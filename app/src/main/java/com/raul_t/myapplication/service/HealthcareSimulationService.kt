@@ -21,6 +21,10 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class HealthcareSimulationService : Service() {
 
+    companion object {
+        private const val TAG = "HealthcareSimulationService"
+    }
+
     @Inject
     lateinit var heartRateDataSource: FakeHeartRateDataSource
 
@@ -41,7 +45,7 @@ class HealthcareSimulationService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d("HealthcareService", "onCreate - Initializing data relays")
+        Log.d(TAG, "onCreate - Initializing data relays")
         notificationHelper.createNotificationChannel()
 
         // 1. BLE Data Relay: Listen to BPM changes and push to BLE
@@ -49,7 +53,7 @@ class HealthcareSimulationService : Service() {
         serviceScope.launch {
             heartRateDataSource.currentBpm.collect { bpm ->
                 if (bpm > 0) {
-                    Log.v("HealthcareService", "Relaying BPM to BLE: $bpm")
+                    Log.v(TAG, "Relaying BPM to BLE: $bpm")
                     bleManager.updateHeartRate(bpm)
                 }
             }
@@ -71,13 +75,13 @@ class HealthcareSimulationService : Service() {
                 if (startStateChanged || advertisingStateChanged) {
                     if (sensor.isStarted && sensor.isAdvertising) {
                         if (!bleManager.isBluetoothEnabled()) {
-                            Log.e("HealthcareService", "Bluetooth is disabled, cannot advertise")
+                            Log.e(TAG, "Bluetooth is disabled, cannot advertise")
                         } else {
-                            Log.i("HealthcareService", "Starting Advertising")
+                            Log.i(TAG, "Starting Advertising")
                             bleManager.startAdvertising(sensor)
                         }
                     } else {
-                        Log.i("HealthcareService", "Stopping Advertising")
+                        Log.i(TAG, "Stopping Advertising")
                         bleManager.stopAdvertising()
                     }
                 }
@@ -85,7 +89,7 @@ class HealthcareSimulationService : Service() {
                 // --- Handle Dynamic Data Update (Soft Update) ---
                 // We push status AND name updates via the existing GATT connection.
                 if (statusChanged || nameChanged || (sensor.isStarted && sensor.isAdvertising && lastSensorState == null)) {
-                    Log.d("HealthcareService", "Updating Sensor Data via BLE: Status=${sensor.status} Name=${sensor.name}")
+                    Log.d(TAG, "Updating Sensor Data via BLE: Status=${sensor.status} Name=${sensor.name}")
                     bleManager.updateSensorStatus(sensor.status)
                     bleManager.updateSensorName(sensor.name)
                 }
@@ -98,7 +102,7 @@ class HealthcareSimulationService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("HealthcareService", "onStartCommand")
+        Log.d(TAG, "onStartCommand")
 
         startForeground(
             303,
@@ -113,7 +117,7 @@ class HealthcareSimulationService : Service() {
                 
                 if (config.isBpmStarted) {
                     simulationJob = launch {
-                        Log.i("HealthcareService", "Starting loop (Interval: ${config.updateIntervalMs}ms)")
+                        Log.i(TAG, "Starting loop (Interval: ${config.updateIntervalMs}ms)")
                         while (true) {
                             heartRateDataSource.createNewHeartRate()
                             delay(config.updateIntervalMs)
@@ -128,7 +132,7 @@ class HealthcareSimulationService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d("HealthcareService", "onDestroy")
+        Log.d(TAG, "onDestroy")
         bleManager.stopAdvertising()
         serviceScope.cancel()
     }
