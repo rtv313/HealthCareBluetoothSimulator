@@ -77,9 +77,7 @@ fun SensorEmitterScreen(
 
         BluetoothSection(
             isAdvertising = sensor.isAdvertising,
-            allowConnection = sensor.allowConnection,
-            onAdvertisingChange = viewModel::toggleAdvertising,
-            onAllowConnectionChange = viewModel::toggleAllowConnection
+            onAdvertisingChange = viewModel::toggleAdvertising
         )
 
         Spacer(modifier = Modifier.height(16.dp))

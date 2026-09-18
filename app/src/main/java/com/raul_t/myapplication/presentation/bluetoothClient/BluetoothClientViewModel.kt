@@ -8,6 +8,7 @@ import com.raul_t.myapplication.domain.model.DiscoveredBluetoothDevice
 import com.raul_t.myapplication.domain.usecase.*
 import com.raul_t.myapplication.presentation.common.SimulationUiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -30,8 +31,8 @@ class BluetoothClientViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(BluetoothClientUiState())
     val uiState: StateFlow<BluetoothClientUiState> = _uiState.asStateFlow()
 
-    private val _event = MutableSharedFlow<SimulationUiEvent>()
-    val event: SharedFlow<SimulationUiEvent> = _event.asSharedFlow()
+    private val _event = Channel<SimulationUiEvent>()
+    val event = _event.receiveAsFlow()
 
     init {
         // Automatically listen to the data layer's found bluetooth devices.
@@ -122,7 +123,7 @@ class BluetoothClientViewModel @Inject constructor(
             startScanning()
         } else {
             viewModelScope.launch {
-                _event.emit(SimulationUiEvent.RequestPermissions)
+                _event.send(SimulationUiEvent.RequestPermissions)
             }
         }
     }

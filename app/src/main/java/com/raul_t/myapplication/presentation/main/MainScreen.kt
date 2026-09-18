@@ -8,6 +8,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -23,6 +24,7 @@ import com.raul_t.myapplication.navigation.Screen
 import com.raul_t.myapplication.presentation.bluetoothSensorEmulator.SensorEmitterScreen
 import com.raul_t.myapplication.presentation.heart.HeartRateScreen
 import com.raul_t.myapplication.presentation.bluetoothClient.BluetoothClientScreen
+import com.raul_t.myapplication.presentation.common.rememberSimulationPermissionState
 import com.raul_t.myapplication.ui.theme.SuccessGreen
 
 @Composable
@@ -33,6 +35,14 @@ fun MainScreen() {
         Screen.BluetoothEmitter,
         Screen.ClientSimulator,
     )
+
+    val permissionState = rememberSimulationPermissionState()
+
+    LaunchedEffect(Unit) {
+        if (!permissionState.allGranted) {
+            permissionState.requestPermissions()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
