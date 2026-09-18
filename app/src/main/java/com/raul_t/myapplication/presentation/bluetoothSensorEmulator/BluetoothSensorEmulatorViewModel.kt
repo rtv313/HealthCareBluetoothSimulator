@@ -93,12 +93,6 @@ class BluetoothSensorEmulatorViewModel @Inject constructor(
         }
     }
 
-    fun toggleAllowConnection(enabled: Boolean) {
-        viewModelScope.launch {
-            updateSensorConfigUseCase { it.copy(allowConnection = enabled) }
-        }
-    }
-
     fun togglePinEnabled(enabled: Boolean) {
         viewModelScope.launch {
             updateSensorConfigUseCase { it.copy(isPinEnabled = enabled) }

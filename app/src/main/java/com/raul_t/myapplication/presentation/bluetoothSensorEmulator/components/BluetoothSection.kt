@@ -17,9 +17,7 @@ import com.raul_t.myapplication.R
 @Composable
 fun BluetoothSection(
     isAdvertising: Boolean,
-    allowConnection: Boolean,
-    onAdvertisingChange: (Boolean) -> Unit,
-    onAllowConnectionChange: (Boolean) -> Unit
+    onAdvertisingChange: (Boolean) -> Unit
 ) {
     Column() {
         Text(
@@ -38,24 +36,6 @@ fun BluetoothSection(
         Switch(
             checked = isAdvertising,
             onCheckedChange = onAdvertisingChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.outline,
-                checkedTrackColor = MaterialTheme.colorScheme.surface,
-                checkedBorderColor = MaterialTheme.colorScheme.outline,
-                uncheckedThumbColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f),
-                uncheckedTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f),
-                uncheckedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f)
-            )
-        )
-
-        Text(
-            text = stringResource(R.string.allow_connection_label),
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Switch(
-            checked = allowConnection,
-            onCheckedChange = onAllowConnectionChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.outline,
                 checkedTrackColor = MaterialTheme.colorScheme.surface,
