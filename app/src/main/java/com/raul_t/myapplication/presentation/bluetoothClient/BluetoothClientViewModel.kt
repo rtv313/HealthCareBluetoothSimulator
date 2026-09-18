@@ -35,6 +35,8 @@ class BluetoothClientViewModel @Inject constructor(
     private val _event = Channel<SimulationUiEvent>()
     val event = _event.receiveAsFlow()
 
+    private var connectionTimeoutJob: kotlinx.coroutines.Job? = null
+
     init {
         // Automatically listen to the data layer's found bluetooth devices.
         viewModelScope.launch {
@@ -51,40 +53,54 @@ class BluetoothClientViewModel @Inject constructor(
                 
                 when (state) {
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connecting -> {
+                        connectionTimeoutJob?.cancel()
+                        connectionTimeoutJob = viewModelScope.launch {
+                            kotlinx.coroutines.delay(10000L) // 10 second guardrail timeout
+                            Log.w("BluetoothClientVM", "Connection guardrail timeout triggered. Dismissing loading and disconnecting.")
+                            disconnect()
+                        }
                         _uiState.update { 
                             it.copy(
                                 mockName = "Connecting...",
-                                mockBpm = -1
+                                mockBpm = -1,
+                                isLoading = true
                             )
                         }
                     }
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.WaitingForPin -> {
+                        connectionTimeoutJob?.cancel()
                         _uiState.update { 
                             it.copy(
                                 isWaitingForPin = true,
-                                pinErrorMessage = null
+                                pinErrorMessage = null,
+                                isLoading = false
                             )
                         }
                     }
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.InvalidPin -> {
+                        connectionTimeoutJob?.cancel()
                         _uiState.update { 
                             it.copy(
                                 isWaitingForPin = true,
-                                pinErrorMessage = "Wrong PIN"
+                                pinErrorMessage = "Wrong PIN",
+                                isLoading = false
                             )
                         }
                     }
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Connected -> {
+                        connectionTimeoutJob?.cancel()
                         _uiState.update { 
                             it.copy(
                                 mockName = it.connectedDevice?.name ?: "Health Sensor",
                                 isWaitingForPin = false,
-                                pinErrorMessage = null
+                                pinErrorMessage = null,
+                                isLoading = false
                             )
                         }
                     }
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Disconnected,
                     is com.raul_t.myapplication.ble_connect.BleClientConnectionState.Error -> {
+                        connectionTimeoutJob?.cancel()
                         if (_uiState.value.connectedDevice != null) {
                             Log.w("BluetoothClientVM", "COMMUNICATION LOST: Setting UI to Server Stopped.")
                             _uiState.update { 
@@ -93,14 +109,16 @@ class BluetoothClientViewModel @Inject constructor(
                                     mockBpm = -1,
                                     mockStatus = com.raul_t.myapplication.domain.model.SensorStatus.Disconnected,
                                     isWaitingForPin = false,
-                                    pinErrorMessage = null
+                                    pinErrorMessage = null,
+                                    isLoading = false
                                 )
                             }
                         } else {
                             _uiState.update { 
                                 it.copy(
                                     isWaitingForPin = false,
-                                    pinErrorMessage = null
+                                    pinErrorMessage = null,
+                                    isLoading = false
                                 )
                             }
                         }

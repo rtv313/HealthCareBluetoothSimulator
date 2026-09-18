@@ -11,6 +11,7 @@ data class BluetoothClientUiState(
     val connectionState: BleClientConnectionState = BleClientConnectionState.Disconnected,
     val isWaitingForPin: Boolean = false,
     val pinErrorMessage: String? = null,
+    val isLoading: Boolean = false,
     val mockBpm: Int = 72,
     val mockStatus: SensorStatus = SensorStatus.Healthy,
     val mockName: String = ""
