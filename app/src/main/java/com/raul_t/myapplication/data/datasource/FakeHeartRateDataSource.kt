@@ -40,19 +40,9 @@ class FakeHeartRateDataSource @Inject constructor() {
 
     fun updateConfig(newConfig: SimulationConfig) {
         _config.value = newConfig
-        
-        // If fix BPM is enabled, update current BPM immediately to reflect the target
-        if (newConfig.isFixBpmEnabled) {
-            _currentBpm.value = newConfig.targetBpm
-        }
     }
     
     fun updateConfig(update: (SimulationConfig) -> SimulationConfig) {
         _config.update(update)
-        
-        val newConfig = _config.value
-        if (newConfig.isFixBpmEnabled) {
-            _currentBpm.value = newConfig.targetBpm
-        }
     }
 }
