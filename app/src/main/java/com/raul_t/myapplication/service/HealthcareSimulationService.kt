@@ -15,6 +15,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -97,6 +99,25 @@ class HealthcareSimulationService : Service() {
                 lastSensorState = sensor
             }
         }
+
+        // 3. Heart Rate Simulation Loop Management
+        serviceScope.launch {
+            heartRateDataSource.config
+                .map { it.isBpmStarted to it.updateIntervalMs }
+                .distinctUntilChanged()
+                .collect { (isStarted, interval) ->
+                    simulationJob?.cancel()
+                    if (isStarted) {
+                        simulationJob = launch {
+                            Log.i(TAG, "Starting loop (Interval: ${interval}ms)")
+                            while (true) {
+                                heartRateDataSource.createNewHeartRate()
+                                delay(interval)
+                            }
+                        }
+                    }
+                }
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -109,23 +130,6 @@ class HealthcareSimulationService : Service() {
             notificationHelper.createNotification(),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
         )
-
-        // Heart Rate Simulation Loop Management
-        serviceScope.launch {
-            heartRateDataSource.config.collect { config ->
-                simulationJob?.cancel()
-                
-                if (config.isBpmStarted) {
-                    simulationJob = launch {
-                        Log.i(TAG, "Starting loop (Interval: ${config.updateIntervalMs}ms)")
-                        while (true) {
-                            heartRateDataSource.createNewHeartRate()
-                            delay(config.updateIntervalMs)
-                        }
-                    }
-                }
-            }
-        }
 
         return START_STICKY
     }
